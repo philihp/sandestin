@@ -20,6 +20,10 @@ class Pixel {
     pixels[this.id] = this;
 
     this.point = point;
+    this.x = this.point[0];
+    this.y = this.point[1];
+    this.z = this.point[2];
+
     this.outputSlot = outputSlot;
     if (outputSlotToPixel[outputSlot] !== undefined)
       throw new Error(`channel collision at channel ${firstChannel}`)
@@ -62,6 +66,27 @@ class Edge {
   }
 }
 
+class Model {
+  _initialize() {
+    // Compute the (axis-aligned) bounding box of the model
+    this.min = [...pixels[0].point];
+    this.max = [...pixels[0].point];
+    pixels.forEach(pixel => {
+      for (let i = 0; i < 3; i ++) {
+        this.min[i] = Math.min(this.min[i], pixel.point[i]);
+        this.max[i] = Math.max(this.max[i], pixel.point[i]);
+      }
+    });
+  }
+
+  // Return the center of the (axis-aligned) bounding box
+  center() {
+    return [0, 1, 2].map(i => (this.max[i] + this.min[i]) / 2);
+  }
+}
+
+let model = new Model;
+
 function buildModel() {
   let inchesPerMeter = 39.3701;
 
@@ -75,13 +100,15 @@ function buildModel() {
   let cumulativeOutputSlot = 0;
   for (let rafter = 0; rafter <= rafterSpacing.length; rafter ++) {
     for (let side = 0; side < 2; side ++) {
-      let start = new Node([cumulativeDistance / inchesPerMeter, 0, side * rafterHeight]);
-      let end = new Node([cumulativeDistance / inchesPerMeter, rafterLength, side * rafterHeight]);
+      let start = new Node([0, cumulativeDistance / inchesPerMeter,
+        side * rafterHeight / inchesPerMeter]);
+      let end = new Node([rafterLength / inchesPerMeter, cumulativeDistance / inchesPerMeter,
+        side * rafterHeight / inchesPerMeter]);
       new Edge(start, end, pixelsPerRafter, cumulativeOutputSlot);
       cumulativeOutputSlot += pixelsPerRafter;
     }
 
-    cumulativeDistance += rafterSpacing; // will reference past end in final iteration
+    cumulativeDistance += rafterSpacing[rafter]; // will reference past end in final iteration
   }
 }
    
@@ -96,8 +123,20 @@ import { default as e131 } from 'e131';
 // lookup for each and every e131 packet sent. This is a "good enough" fix
 var e131Client = new e131.Client('10.2.0.8');  // or use a universe
 
-function sendFrame(buffer) {
+function sendFrame(layer) {
   return new Promise(resolve => {
+    var buffer = Buffer.alloc(pixels.length * channelsPerPixel);
+    for (let i = 0; i < pixels.length; i ++) {
+      // XXX change the scale to [0,1]
+      // XXX apply alpha?
+      let offset = pixels[i].outputSlot * channelsPerPixel;
+      buffer[offset ++] = Math.min(layer.colors[i * 4 + 1], 255); // green
+      buffer[offset ++] = Math.min(layer.colors[i * 4 + 0], 255); // red
+      buffer[offset ++] = Math.min(layer.colors[i * 4 + 2], 255); // blue
+      if (channelsPerPixel === 4)
+        buffer[offset] = 0; // warm white
+    }
+    
     var i = 0;
     var pos = 0;
 
@@ -140,47 +179,58 @@ function sendFrame(buffer) {
 
 import { default as rgb } from 'hsv-rgb';
 
-async function renderFrame(frame) {
-  var buf = Buffer.alloc(pixels.length * channelsPerPixel);
-  var pixelsPerSide = 60*3;
-  var sidesPerRafter = 2;
-  var numRafters = 7;
-  
-  let patternSpeed = .5;
-  let patternWidth = .5;
-  
-  let hueCenter = (frame.displayTime / 1000.0 * patternSpeed) % 1.0;
-  var hueStart = hueCenter - patternWidth / 2 + 1.0;
-  var hueEnd = hueCenter + patternWidth / 2 + 1.0;
-  var hueStep = (hueEnd - hueStart) / 240;
+async function renderFrame(frame, layer) {
+  let hz = .5;
+  let timeBias = frame.displayTime * hz;
+  let rainbowWidth = 5; // meters
+  let stride = .1;
 
-  var pixel = -1;
-  var side = 0;
-  var rafter = 0;
-
-  var totalChannels = pixels.length * channelsPerPixel;
-  for (var idx = 0; idx < totalChannels; idx += channelsPerPixel) {
-    pixel++;
-    if (pixel === pixelsPerSide) {
-      pixel = 0;
-      side++;
-      if (side === sidesPerRafter) {
-        side = 0;
-        rafter++;
-      }
-    }
-
-    let color = rgb(((hueStart + pixel * hueStep + rafter/8.0) % 1) * 360,
+  pixels.forEach(pixel => {
+    let color = rgb(((timeBias + pixel.x / rainbowWidth + pixel.y * stride) % 1) * 360,
       100 /* saturation */, 100 /* brightness */);
-
-    buf[idx + 0] = Math.min(color[1], 255); // green
-    buf[idx + 1] = Math.min(color[0], 255); // red
-    buf[idx + 2] = Math.min(color[2], 255); // blue
-    buf[idx + 3] = 0; // warm white
-  }
-
-  await sendFrame(buf);
+    layer.setRGB(pixel, color);
+  });
 }
+
+function dist(point1, point2) {
+  let dx = point1[0] - point2[0];
+  let dy = point1[1] - point2[1];
+  let dz = point1[2] - point2[2];
+  return Math.sqrt(dx*dx + dy*dy + dz*dz);
+}
+
+async function renderFrame2(frame, layer) {
+  let radius = 2;
+  let rpm = 20;
+  let timeAngle = 2.0 * Math.PI * frame.displayTime / (60 / rpm);
+  let center = model.center();
+  let cx = Math.cos(timeAngle) * radius + center[0];
+  let cy = Math.sin(timeAngle) * radius + center[1];
+
+  pixels.forEach(pixel => {
+    let d = dist([cx, cy, pixel.z], pixel.point);
+    layer.setRGB(pixel, [Math.max(255 - d*200,0), 0, 0]);
+  });
+}
+
+async function renderFrame3(frame, layer) {
+  let radius = Math.sin(Math.PI * frame.displayTime / 4) * 2;
+  let rpm = 17;
+  let timeAngle = 2.0 * Math.PI * frame.displayTime / (60 / rpm);
+  let center = model.center();
+  let cx = Math.cos(timeAngle) * radius + center[0];
+  let cy = Math.sin(timeAngle) * radius + center[1];
+  let timeBias = frame.displayTime / 5;
+
+  pixels.forEach(pixel => {
+    let d = dist([cx, cy, pixel.z], pixel.point);
+
+    let color = rgb(((timeBias + d) % 1) * 360,
+      100 /* saturation */, d < 1 ? 100 : 0/* brightness */);
+    layer.setRGB(pixel, color);
+  });
+}
+
 
 /*****************************************************************************/
 /* Main loop                                                                 */
@@ -193,8 +243,29 @@ class Frame {
   }
 }
 
+class Layer {
+  constructor() {
+    this.colors = new Array(pixels.length * 4).fill(0);
+  }
+  setRGB(pixel, color) {
+    let offset = pixel.id * 4;
+    this.colors[offset ++] = color[0];
+    this.colors[offset ++] = color[1];
+    this.colors[offset ++] = color[2];
+    this.colors[offset] = 1; /* alpha */
+  }
+  setRGBA(pixel, color, alpha) {
+    let offset = pixel.id * 4;
+    this.colors[offset ++] = color[0];
+    this.colors[offset ++] = color[1];
+    this.colors[offset ++] = color[2];
+    this.colors[offset] = alpha;
+  }
+}
+
 async function main() {
   buildModel();
+  model._initialize();
   console.log(`Model has ${nodes.length} nodes, ${edges.length} edges, and ${pixels.length} pixels`);
 
   let framesPerSecond = 40;
@@ -207,11 +278,13 @@ async function main() {
     // frame is rendered.
     let msSinceStart = (Date.now() - startTime);
     let frameIndex = Math.floor(msSinceStart / msPerFrame) + 1;
-    let displayTime = startTime + frameIndex * msPerFrame;
-    let frame = new Frame(frameIndex, displayTime);
-    await sleep(displayTime - Date.now());
+    let displayTimeMs = startTime + frameIndex * msPerFrame;
+    let frame = new Frame(frameIndex, displayTimeMs / 1000);
+    await sleep(displayTimeMs - Date.now());
 
-    await renderFrame(frame);
+    let layer = new Layer;
+    await renderFrame3(frame, layer);
+    await sendFrame(layer);
 
     if (lastFrameIndex !== null && lastFrameIndex !== frameIndex - 1) {
       console.log(`warning: skipped frames from ${lastFrameIndex} to ${frameIndex}`);
