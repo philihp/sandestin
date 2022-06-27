@@ -5,6 +5,13 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function dist(point1, point2) {
+  let dx = point1[0] - point2[0];
+  let dy = point1[1] - point2[1];
+  let dz = point1[2] - point2[2];
+  return Math.sqrt(dx*dx + dy*dy + dz*dz);
+}
+
 /*****************************************************************************/
 /* Model geometry                                                            */
 /*****************************************************************************/
@@ -71,6 +78,7 @@ class Model {
     // Compute the (axis-aligned) bounding box of the model
     this.min = [...pixels[0].point];
     this.max = [...pixels[0].point];
+
     pixels.forEach(pixel => {
       for (let i = 0; i < 3; i ++) {
         this.min[i] = Math.min(this.min[i], pixel.point[i]);
@@ -179,58 +187,65 @@ function sendFrame(layer) {
 
 import { default as rgb } from 'hsv-rgb';
 
-async function renderFrame(frame, layer) {
-  let hz = .5;
-  let timeBias = frame.displayTime * hz;
-  let rainbowWidth = 5; // meters
-  let stride = .1;
+class RainbowLayer {
+  get(frame) {
+    let layer = new Layer;
+    let hz = .5;
+    let timeBias = frame.displayTime * hz;
+    let rainbowWidth = 5; // meters
+    let stride = .1;
+  
+    pixels.forEach(pixel => {
+      let color = rgb(((timeBias + pixel.x / rainbowWidth + pixel.y * stride) % 1) * 360,
+        100 /* saturation */, 100 /* brightness */);
+      layer.setRGB(pixel, color);
+    });
 
-  pixels.forEach(pixel => {
-    let color = rgb(((timeBias + pixel.x / rainbowWidth + pixel.y * stride) % 1) * 360,
-      100 /* saturation */, 100 /* brightness */);
-    layer.setRGB(pixel, color);
-  });
+    return layer;
+  }
 }
 
-function dist(point1, point2) {
-  let dx = point1[0] - point2[0];
-  let dy = point1[1] - point2[1];
-  let dz = point1[2] - point2[2];
-  return Math.sqrt(dx*dx + dy*dy + dz*dz);
+class RedSpotLayer {
+  get(frame) {
+    let layer = new Layer;
+    let radius = 2;
+    let rpm = 20;
+    let timeAngle = 2.0 * Math.PI * frame.displayTime / (60 / rpm);
+    let center = model.center();
+    let cx = Math.cos(timeAngle) * radius + center[0];
+    let cy = Math.sin(timeAngle) * radius + center[1];
+
+    pixels.forEach(pixel => {
+      let d = dist([cx, cy, pixel.z], pixel.point);
+      layer.setRGB(pixel, [Math.max(255 - d*200,0), 0, 0]);
+    });
+
+    return layer;
+  }
 }
 
-async function renderFrame2(frame, layer) {
-  let radius = 2;
-  let rpm = 20;
-  let timeAngle = 2.0 * Math.PI * frame.displayTime / (60 / rpm);
-  let center = model.center();
-  let cx = Math.cos(timeAngle) * radius + center[0];
-  let cy = Math.sin(timeAngle) * radius + center[1];
+class RainbowSpotLayer {
+  get(frame) {
+    let layer = new Layer;
+    let radius = Math.sin(Math.PI * frame.displayTime / 4) * 2;
+    let rpm = 17;
+    let timeAngle = 2.0 * Math.PI * frame.displayTime / (60 / rpm);
+    let center = model.center();
+    let cx = Math.cos(timeAngle) * radius + center[0];
+    let cy = Math.sin(timeAngle) * radius + center[1];
+    let timeBias = frame.displayTime / 5;
 
-  pixels.forEach(pixel => {
-    let d = dist([cx, cy, pixel.z], pixel.point);
-    layer.setRGB(pixel, [Math.max(255 - d*200,0), 0, 0]);
-  });
+    pixels.forEach(pixel => {
+      let d = dist([cx, cy, pixel.z], pixel.point);
+
+      let color = rgb(((timeBias + d) % 1) * 360,
+        100 /* saturation */, d < 1 ? 100 : 0/* brightness */);
+      layer.setRGB(pixel, color);
+    });
+
+    return layer;
+  }
 }
-
-async function renderFrame3(frame, layer) {
-  let radius = Math.sin(Math.PI * frame.displayTime / 4) * 2;
-  let rpm = 17;
-  let timeAngle = 2.0 * Math.PI * frame.displayTime / (60 / rpm);
-  let center = model.center();
-  let cx = Math.cos(timeAngle) * radius + center[0];
-  let cy = Math.sin(timeAngle) * radius + center[1];
-  let timeBias = frame.displayTime / 5;
-
-  pixels.forEach(pixel => {
-    let d = dist([cx, cy, pixel.z], pixel.point);
-
-    let color = rgb(((timeBias + d) % 1) * 360,
-      100 /* saturation */, d < 1 ? 100 : 0/* brightness */);
-    layer.setRGB(pixel, color);
-  });
-}
-
 
 /*****************************************************************************/
 /* Main loop                                                                 */
@@ -268,6 +283,8 @@ async function main() {
   model._initialize();
   console.log(`Model has ${nodes.length} nodes, ${edges.length} edges, and ${pixels.length} pixels`);
 
+  let mainObject = new RedSpotLayer;
+
   let framesPerSecond = 40;
   let msPerFrame = 1000.0 / framesPerSecond;
   let lastFrameIndex = null;
@@ -282,8 +299,7 @@ async function main() {
     let frame = new Frame(frameIndex, displayTimeMs / 1000);
     await sleep(displayTimeMs - Date.now());
 
-    let layer = new Layer;
-    await renderFrame3(frame, layer);
+    let layer = mainObject.get(frame);
     await sendFrame(layer);
 
     if (lastFrameIndex !== null && lastFrameIndex !== frameIndex - 1) {
