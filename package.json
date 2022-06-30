@@ -2,6 +2,12 @@
   "type": "module",
   "dependencies": {
     "e131": "^1.1.3",
-    "hsv-rgb": "^1.0.0"
+    "express": "^4.18.1",
+    "hsv-rgb": "^1.0.0",
+    "ws": "^8.8.0"
+  },
+  "optionalDependencies": {
+    "bufferutil": "*",
+    "utf-8-validate": "*"
   }
 }
