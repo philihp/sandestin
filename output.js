@@ -49,7 +49,7 @@ import { default as e131 } from 'e131';
 // We hardcode the IP because if we don't, a bug somewhere causes a DNS
 // lookup for each and every e131 packet sent. This is a "good enough" fix
 const e131Client = new e131.Client('10.2.0.8');  // or use a universe
-const e131ChannelsPerPixel = 4;
+const e131ChannelsPerPixel = 4; // XXX needs to be adjusted for zome vs rafters
 
 export function sendFrame(layer) {
   return new Promise(resolve => {

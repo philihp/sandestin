@@ -1,10 +1,43 @@
-<div id="message">Loading..</div>
-<div id="counter"></div>
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>zome simulator</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background-color: #000;
+				color: #fff;
+			}
+		</style>
+	</head>
 
-<script>
-  console.log("hi console");
+	<body>
+		<div id="title">zome simulator</div>
+		<div id="message"></div>
+		<div id="counter"></div>
 
-  fetch("/api/model", {
+		<!-- Import maps polyfill -->
+		<!-- Remove this when import maps will be widely supported -->
+		<script async src="https://unpkg.com/es-module-shims@1.3.6/dist/es-module-shims.js"></script>
+
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "./lib/three.module.js"
+				}
+			}
+		</script>
+
+		<script type="module">
+
+			import * as THREE from 'three';
+
+			import { OrbitControls } from './lib/OrbitControls.js';
+
+			let camera, controls, scene, renderer, model, outputSlots;
+
+      fetch("/api/model", {
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -15,19 +48,106 @@
           .then(res => res.json())
           .then(data => {
             console.log(data);
+            model = data;
             document.querySelector("#message").innerText =
-              `Loaded geometry - ${data.pixels.length} pixels`;
+              `loaded geometry - ${data.pixels.length} pixels`;
+            init();
           })
           .catch(err => console.log(err));
 
-  let count = 0;
-  let webSocket = new WebSocket("ws://localhost:3001");
-  webSocket.binaryType = 'arraybuffer';
-  webSocket.onmessage = (event) => {
-    count ++;
-    document.querySelector("#counter").innerText =
-              `Received ${count} packets (${event.data.byteLength} bytes long)`;
+      let frameCount = 0;
+      let webSocket = new WebSocket("ws://localhost:3001");
+      webSocket.binaryType = 'arraybuffer';
+      webSocket.onmessage = (event) => {
+        frameCount++;
+        document.querySelector("#counter").innerText =
+          `received ${frameCount} packets (${event.data.byteLength} bytes long)`;
+        let bytes = new Uint8Array(event.data);
+        if (outputSlots) {
+          for (let i = 0; i < bytes.length / 3; i ++) {
+            let color = ((bytes[i*3 + 1] * 256) + bytes[i*3]) * 256 + bytes[i*3 + 2]; //GRB
+            outputSlots[i].color.set(color); // this will be a SpriteMaterial
+          }
+        }
+        if (frameCount === 1)
+          console.log(bytes);
 
-  }
+      };
 
-</script>
+			function init() {
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color( 0x000000 );
+
+				renderer = new THREE.WebGLRenderer( { antialias: true } );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				document.body.appendChild( renderer.domElement );
+
+				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, .1, 20 );
+				camera.position.set( 5, 0, 3 );
+
+				// controls
+
+				controls = new OrbitControls( camera, renderer.domElement );
+				controls.listenToKeyEvents( window ); // optional
+
+        controls.enablePan = false;
+        controls.autoRotate = true;
+				controls.enableDamping = true; // an animation loop is required when either damping or auto-rotation are enabled
+				controls.dampingFactor = 0.05;
+
+				controls.minDistance = 2;
+				controls.maxDistance = 10;
+
+				controls.maxPolarAngle = Math.PI;
+				controls.minPolarAngle = 0;
+
+				// world
+        
+        const material = new THREE.LineBasicMaterial( { color: 0xffffff } );
+        const points = [];
+        let yOffset = -1.6;
+        for (let node of model.nodes) {
+          // Swap Y and Z, because in Three.js, Y is up (and this is assumed various places)
+          // I'm sure I'm doing this all wrong, but:
+          // 1.6 meters is a rough estimate of the average height of human eyes above the ground
+          points.push(new THREE.Vector3(node.point[0], node.point[2] + yOffset, node.point[1]));
+        }
+        for (let edge of model.edges) {
+          const geometry = new THREE.BufferGeometry().setFromPoints( 
+            [points[edge.startNode], points[edge.endNode]]);  
+          const line = new THREE.Line( geometry, material );
+          scene.add( line );
+        }
+
+        outputSlots = [];
+        for (let pixel of model.pixels) {
+          const spriteMaterial = new THREE.SpriteMaterial( { color: 0xffffff } );
+          const sprite = new THREE.Sprite( spriteMaterial );
+          sprite.scale.set(.02, .02, 1);
+          sprite.position.set(pixel.point[0], pixel.point[2] + yOffset, pixel.point[1]);
+          scene.add( sprite );
+          outputSlots[pixel.outputSlot] = spriteMaterial;
+        }
+
+        // activate!
+
+				window.addEventListener( 'resize', onWindowResize );
+        animate();
+			}
+
+			function onWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function animate() {
+				requestAnimationFrame( animate );
+				controls.update(); // only required if controls.enableDamping = true, or if controls.autoRotate = true
+				renderer.render( scene, camera );
+			}
+		</script>
+
+	</body>
+</html>
