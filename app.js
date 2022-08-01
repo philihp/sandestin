@@ -99,7 +99,7 @@ function buildModelFromObjFile(file) {
 
 import { default as rgb } from 'hsv-rgb';
 
-class RainbowLayer {
+class RainbowPattern {
   get(frame) {
     let layer = new Layer(frame.model);
     let hz = .5;
@@ -117,7 +117,7 @@ class RainbowLayer {
   }
 }
 
-class RedSpotLayer {
+class RedSpotPattern {
   get(frame) {
     let layer = new Layer(frame.model);
     let radius = 2;
@@ -136,7 +136,7 @@ class RedSpotLayer {
   }
 }
 
-class RainbowSpotLayer {
+class RainbowSpotPattern {
   get(frame) {
     let layer = new Layer(frame.model);
     let radius = Math.sin(Math.PI * frame.displayTime / 4) * 2;
@@ -159,7 +159,7 @@ class RainbowSpotLayer {
   }
 }
 
-class BlankLayer {
+class BlankPattern {
   get(frame) {
     return new Layer(frame.model);
   }
@@ -227,7 +227,7 @@ async function main() {
 
   startServer(model);
 
-  let mainObject = new RainbowSpotLayer;
+  let mainObject = new RainbowSpotPattern;
 
   let framesPerSecond = 40;
   let msPerFrame = 1000.0 / framesPerSecond;
