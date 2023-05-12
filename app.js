@@ -2,6 +2,8 @@ import { sleep, dist } from './utils.js';
 import { sendFrame } from './output.js';
 import { Pixel, Node, Edge, Model } from './model.js';
 import { default as fs } from 'fs';
+import { default as tmp } from 'tmp';
+import { default as child_process } from 'child_process';
 
 function buildRafterModel() {
   let model = new Model;
@@ -302,6 +304,43 @@ async function main() {
   let model = buildModelFromObjFile(path.join(pathToRootOfTree, 'zome_3D.obj'));
   console.log(`Model has ${model.nodes.length} nodes, ${model.edges.length} edges, and ${model.pixels.length} pixels`);
 
+  let framesPerSecond = 40;
+  let msPerFrame = 1000.0 / framesPerSecond;
+  let totalPixels = model.outputSlotToPixel.length;
+
+  let toolConfiguration = {
+    framesPerSecond: framesPerSecond,
+    totalPixels: totalPixels,
+    model: model.toJSON(),
+  };
+
+
+  tmp.setGracefulCleanup();
+  const tmpobj = tmp.fileSync();
+  fs.writeSync(tmpobj.fd, JSON.stringify(toolConfiguration));
+  console.log('File: ', tmpobj.name);
+
+  let child = child_process.spawn('node', ['/Users/gschmidt/co/sandestin/tool-test.js', tmpobj.name]);
+  child.on('close', (code) => {
+    // XXX handle
+    console.log(`child process exited with code ${code}`);
+  });
+  child.on('error', (err) => {
+    console.log('Failed to start subprocess.');
+  });
+
+  let childBuf = Buffer.alloc(0);
+  child.stdout.on('data', (buf) => {
+    childBuf = Buffer.concat([childBuf, buf]);
+    console.log(`got ${buf.length} bytes from child, now ${childBuf.length} bytes buffered`);
+    let frameSize = 4 + 4 * totalPixels;
+    while (childBuf.length >= frameSize) {
+      let frameData = childBuf.subarray(0, frameSize);
+      childBuf = childBuf.subarray(frameSize);
+      console.log(`consumed ${frameData.length} bytes`);
+    }
+  });
+
   startServer(model);
 
   // let mainObject = new RainbowSpotPattern;
@@ -309,10 +348,6 @@ async function main() {
   // let mainObject = new LinearRandomWalkPattern(15);
   // let canvas = document.createElement('canvas');
 
-  // let mainObject = new Project2DImagePattern(model, "media/test.jpeg");
-  
-  let framesPerSecond = 40;
-  let msPerFrame = 1000.0 / framesPerSecond;
   let lastFrameIndex = null;
   let startTime = Date.now();
   while (true) {

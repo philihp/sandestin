@@ -4,6 +4,7 @@
     "e131": "^1.1.3",
     "express": "^4.18.1",
     "hsv-rgb": "^1.0.0",
+    "tmp": "^0.2.1",
     "ws": "^8.8.0"
   },
   "optionalDependencies": {
