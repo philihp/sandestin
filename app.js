@@ -165,6 +165,83 @@ class BlankPattern {
   }
 }
 
+class LinearTopToBottomPattern {
+  get(frame) {
+    let layer = new Layer(frame.model);
+    let threshold = 1 - frame.displayTime/5 % 1; 
+    let topZ = frame.model.center()[2] * 2;
+    let lightEndZ = threshold * topZ;
+    frame.model.edges.forEach(edge => {
+      let colorTemplate = [255,255,255]; // TODO: add colors 
+      edge.pixels.forEach(pixel => {
+        if (pixel.z > lightEndZ) {
+          let brightness = 1 - (pixel.z - lightEndZ) / ( topZ/3 );
+          if (brightness > 0) {
+            let color = colorTemplate.map(x => x * brightness);
+            layer.setRGB(pixel, color);
+          }
+        }
+      })
+    })
+    return layer;
+  }
+}
+
+
+class LinearRandomWalkPattern{
+  // TODO: ideally the tail of each light can be seen on previous edge (real fading effect) 
+
+  constructor(number){
+    this.number = number; // number of light particles flowing around
+    this.edgeIndices =  Array.from({length: this.number}, () => Math.floor(Math.random() * this.number)); //random starting edges
+    this.directions = Array(this.number).fill("down"); 
+  }
+  get(frame) {
+    let layer = new Layer(frame.model);
+    for (let p = 0; p < this.number; p++){
+      let currEdge = frame.model.edges[this.edgeIndices[p]];
+      let threshold = (frame.displayTime  ) % 1; // precentage of the edge that will have color
+      let brightestPixelIndex = Math.ceil(threshold * currEdge.pixels.length);
+      let colorTemplate = [255,255,255]; //TODO: add colors
+      for (let i = 0; i < brightestPixelIndex; i++) {
+        let brightness = i / brightestPixelIndex; // 0 to 1 for fading effect 
+        let color = colorTemplate.map(x => x * brightness);
+        if (this.directions[p] == "down") {
+          layer.setRGB(currEdge.pixels[i], color);
+        }
+        else{
+          layer.setRGB(currEdge.pixels[currEdge.pixels.length-1-i], color);
+        }
+      }
+
+      if (brightestPixelIndex == currEdge.pixels.length){ //find a neighbor edge to be the next edge
+        let currentPoint = this.directions[p] == "down" ? currEdge.endNode.point : currEdge.startNode.point;
+        let nextEdgesDown = frame.model.edges.filter(edge => edge.startNode.point === currentPoint && edge.id != currEdge.id);
+        let nextEdgesUp = frame.model.edges.filter(edge => edge.endNode.point === currentPoint && edge.id != currEdge.id);
+        if (nextEdgesDown.length == 0 && nextEdgesUp.length == 0) { // reset to 0
+          this.edgeIndices[p] = 0;
+        }
+        else{ // choose a random neighbor
+          const random = Math.floor(Math.random() * (nextEdgesDown.length + nextEdgesUp.length));
+          if (random >= nextEdgesDown.length) {
+            this.edgeIndices[p] = nextEdgesUp[random - nextEdgesDown.length].id; 
+            this.directions[p] = "up"
+          }
+          else{
+            this.edgeIndices[p] = nextEdgesDown[random].id; 
+            this.directions[p] = "down"
+          }
+          // console.log("curr edge id:", currEdge.id , "next edge id: ", this.edgeIndex, "direction: ", this.direction)
+        }
+      }
+
+
+    }
+    
+    return layer;
+  }
+}
+
 /*****************************************************************************/
 /* Main loop                                                                 */
 /*****************************************************************************/
@@ -227,8 +304,13 @@ async function main() {
 
   startServer(model);
 
-  let mainObject = new RainbowSpotPattern;
+  // let mainObject = new RainbowSpotPattern;
+  let mainObject = new LinearTopToBottomPattern;
+  // let mainObject = new LinearRandomWalkPattern(15);
+  // let canvas = document.createElement('canvas');
 
+  // let mainObject = new Project2DImagePattern(model, "media/test.jpeg");
+  
   let framesPerSecond = 40;
   let msPerFrame = 1000.0 / framesPerSecond;
   let lastFrameIndex = null;
