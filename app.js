@@ -98,77 +98,10 @@ function buildModelFromObjFile(file) {
 }
 
 /*****************************************************************************/
-/* Frame rendering                                                           */
+/* Old patterns                                                              */
 /*****************************************************************************/
 
-import { default as rgb } from 'hsv-rgb';
-
-class RainbowPattern {
-  get(frame) {
-    let layer = new Layer(frame.model);
-    let hz = .5;
-    let timeBias = frame.displayTime * hz;
-    let rainbowWidth = 5; // meters
-    let stride = .1;
-  
-    frame.model.pixels.forEach(pixel => {
-      let color = rgb(((timeBias + pixel.x / rainbowWidth + pixel.y * stride) % 1) * 360,
-        100 /* saturation */, 100 /* brightness */);
-      layer.setRGB(pixel, color);
-    });
-
-    return layer;
-  }
-}
-
-class RedSpotPattern {
-  get(frame) {
-    let layer = new Layer(frame.model);
-    let radius = 2;
-    let rpm = 20;
-    let timeAngle = 2.0 * Math.PI * frame.displayTime / (60 / rpm);
-    let center = frame.model.center();
-    let cx = Math.cos(timeAngle) * radius + center[0];
-    let cy = Math.sin(timeAngle) * radius + center[1];
-
-    frame.model.pixels.forEach(pixel => {
-      let d = dist([cx, cy, pixel.z], pixel.point);
-      layer.setRGB(pixel, [Math.max(255 - d*200,0), 0, 0]);
-    });
-
-    return layer;
-  }
-}
-
-class RainbowSpotPattern {
-  get(frame) {
-    let layer = new Layer(frame.model);
-    let radius = Math.sin(Math.PI * frame.displayTime / 4) * 2;
-    let rpm = 17;
-    let timeAngle = 2.0 * Math.PI * frame.displayTime / (60 / rpm);
-    let center = frame.model.center();
-    let cx = Math.cos(timeAngle) * radius + center[0];
-    let cy = Math.sin(timeAngle) * radius + center[1];
-    let timeBias = frame.displayTime / 5;
-
-    frame.model.pixels.forEach(pixel => {
-      let d = dist([cx, cy, pixel.z], pixel.point);
-
-      let color = rgb(((timeBias + d) % 1) * 360,
-        100 /* saturation */, d < 1 ? 100 : 0/* brightness */);
-      layer.setRGB(pixel, color);
-    });
-
-    return layer;
-  }
-}
-
-class BlankPattern {
-  get(frame) {
-    return new Layer(frame.model);
-  }
-}
-
+/* Karen's patterns - to be ported back to Python
 class LinearTopToBottomPattern {
   get(frame) {
     let layer = new Layer(frame.model);
@@ -245,6 +178,7 @@ class LinearRandomWalkPattern{
     return layer;
   }
 }
+*/
 
 /*****************************************************************************/
 /* Instruments (external pattern generator programs)                         */
@@ -373,12 +307,7 @@ async function main() {
 
   startServer(model);
 
-  let mainObject = new LinearTopToBottomPattern;
-  let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree, 'patterns', 'red-spot.js')]);
-
-  // let mainObject = new RainbowSpotPattern;
-  // let mainObject = new LinearRandomWalkPattern(15);
-
+  let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree, 'patterns', 'rainbow-spot.js')]);
   let lastFrameIndex = null;
   let startTime = Date.now();
 
