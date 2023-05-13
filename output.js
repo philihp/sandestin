@@ -5,7 +5,7 @@ function buildBuffer(layer, channelsPerPixel) {
   for (let i = 0; i < pixels.length; i ++) {
     // XXX change the scale to [0,1]
     // XXX apply alpha?
-    let offset = pixels[i].outputSlot * channelsPerPixel;
+    let offset = i * channelsPerPixel;
     buffer[offset ++] = Math.min(layer.colors[i * 4 + 1], 255); // green
     buffer[offset ++] = Math.min(layer.colors[i * 4 + 0], 255); // red
     buffer[offset ++] = Math.min(layer.colors[i * 4 + 2], 255); // blue

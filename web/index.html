@@ -121,13 +121,14 @@
         }
 
         outputSlots = [];
-        for (let pixel of model.pixels) {
+        for (let i = 0; i < model.pixels.length; i ++) {
+		  let pixel = model.pixels[i];
           const spriteMaterial = new THREE.SpriteMaterial( { color: 0xffffff } );
           const sprite = new THREE.Sprite( spriteMaterial );
           sprite.scale.set(.02, .02, 1);
-          sprite.position.set(pixel.point[0], pixel.point[2] + yOffset, pixel.point[1]);
+          sprite.position.set(pixel[0], pixel[2] + yOffset, pixel[1]);
           scene.add( sprite );
-          outputSlots[pixel.outputSlot] = spriteMaterial;
+          outputSlots[i] = spriteMaterial;
         }
 
         // activate!

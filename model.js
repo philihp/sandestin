@@ -5,7 +5,10 @@
 export class Pixel {
   constructor(model, point, outputSlot) {
     this.model = model;
-    this.id = model.pixels.length;
+
+    this.id = outputSlot;
+    if (model.pixels[this.id] !== undefined)
+      throw new Error(`channel collision at channel ${this.id}`)
     model.pixels[this.id] = this;
 
     this.point = point;
@@ -13,18 +16,11 @@ export class Pixel {
     this.y = this.point[1];
     this.z = this.point[2];
 
-    this.outputSlot = outputSlot;
-    if (model.outputSlotToPixel[outputSlot] !== undefined)
-      throw new Error(`channel collision at channel ${firstChannel}`)
-    model.outputSlotToPixel[outputSlot] = this;
     model.modified = true;
   }
 
   toJSON() {
-    return {
-      point: this.point,
-      outputSlot: this.outputSlot
-    }
+    return this.point;
   }
 }
 
@@ -91,7 +87,6 @@ export class Model {
     this.nodes = [];
     this.edges = [];
     this.pixels = [];
-    this.outputSlotToPixel = [];
 
     this.modified = true;
     this.min = null;
@@ -122,9 +117,13 @@ export class Model {
     return [0, 1, 2].map(i => (this.max[i] + this.min[i]) / 2);
   }
 
+  pixelCount() {
+    return this.pixels.length;
+  }
+
   toJSON() {
     return {
-      pixels: this.pixels.map(pixel => pixel.toJSON()),
+      pixels: this.pixels.map(pixel => pixel ? pixel.toJSON() : null),
       nodes: this.nodes.map(node => node.toJSON()),
       edges: this.edges.map(edge => edge.toJSON())
     };

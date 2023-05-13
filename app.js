@@ -256,7 +256,7 @@ class Instrument {
   // program: eg 'node', 'python'.. should be in $PATH
   // args: string array of arguments
   constructor(model, framesPerSecond, program, args) {
-    const totalPixels = model.outputSlotToPixel.length;
+    const totalPixels = model.pixelCount();
     const frameSize = 4 + 4 * totalPixels;
 
     const toolConfiguration = {
@@ -268,7 +268,6 @@ class Instrument {
     const tmpobj = tmp.fileSync();
     fs.writeSync(tmpobj.fd, JSON.stringify(toolConfiguration));
 
-    // XXX put `command` here
     this.child = child_process.spawn(program, [...args, tmpobj.name]);
     this.child.on('close', (code) => {
       // XXX handle this?
@@ -371,8 +370,7 @@ async function main() {
 
   let framesPerSecond = 40;
   let msPerFrame = 1000.0 / framesPerSecond;
-  let totalPixels = model.outputSlotToPixel.length;
-
+  let totalPixels = model.pixelCount();
 
   startServer(model);
 

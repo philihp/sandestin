@@ -20,13 +20,13 @@ function writeAsyncToStream(stream, data) {
 }
 
 function centerPoint(model) {
-  let min = [...model.pixels[0].point];
-  let max = [...model.pixels[0].point];
+  let min = [...model.pixels[0]];
+  let max = [...model.pixels[0]];
 
   model.pixels.forEach(pixel => {
     for (let i = 0; i < 3; i ++) {
-      min[i] = Math.min(min[i], pixel.point[i]);
-      max[i] = Math.max(max[i], pixel.point[i]);
+      min[i] = Math.min(min[i], pixel[i]);
+      max[i] = Math.max(max[i], pixel[i]);
     }
   });
 
@@ -40,7 +40,7 @@ async function main() {
   const buf = Buffer.alloc(4 + pixelCount * 4);
 
   console.error("hi from tool");
-  console.error(config);
+  console.error(JSON.stringify(config));
 
   let radius = 2;
   let rpm = 20;
@@ -54,8 +54,8 @@ async function main() {
     
     for (let i = 0; i < config.model.pixels.length; i ++) {
       let pixel = config.model.pixels[i];
-      let d = dist([cx, cy, pixel.point[2]], pixel.point);
-      pixelColors[pixel.outputSlot] = [Math.max(255 - d*200,0), 0, 0];
+      let d = dist([cx, cy, pixel[2]], pixel);
+      pixelColors[i] = [Math.max(255 - d*200,0), 0, 0];
     };
 
     buf.writeInt32LE(frameIndex, 0);
