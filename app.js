@@ -3,6 +3,8 @@ import { sendFrame } from './output.js';
 import { Pixel, Node, Edge, Model } from './model.js';
 import { default as fs } from 'fs';
 import { default as tmp } from 'tmp';
+tmp.setGracefulCleanup();
+import { default as path } from 'path';
 import { default as child_process } from 'child_process';
 
 function buildRafterModel() {
@@ -245,6 +247,70 @@ class LinearRandomWalkPattern{
 }
 
 /*****************************************************************************/
+/* Instruments (external pattern generator programs)                         */
+/*****************************************************************************/
+
+class Instrument {
+  // model: a Model to pass to the instrument
+  // framesPerSecond: the fps to tell the instrument to render at
+  // program: eg 'node', 'python'.. should be in $PATH
+  // args: string array of arguments
+  constructor(model, framesPerSecond, program, args) {
+    const totalPixels = model.outputSlotToPixel.length;
+    const frameSize = 4 + 4 * totalPixels;
+
+    const toolConfiguration = {
+      framesPerSecond: framesPerSecond,
+      totalPixels: totalPixels,
+      model: model.toJSON(),
+    };
+  
+    const tmpobj = tmp.fileSync();
+    fs.writeSync(tmpobj.fd, JSON.stringify(toolConfiguration));
+
+    // XXX put `command` here
+    this.child = child_process.spawn(program, [...args, tmpobj.name]);
+    this.child.on('close', (code) => {
+      // XXX handle this?
+      console.log(`child process exited with code ${code}`);
+    });
+    this.child.on('error', (err) => {
+      // XXX handle this
+      console.log('Failed to start subprocess.');
+    });
+
+    this.child.stderr.pipe(process.stderr); // XXX revisit later? at least break it into lines and prefix it?
+  
+    // if needed for performance, could rewrite this to reduce the number of copies
+    // (keep the incoming buffers in an array, and copy out to a buffer, sans frame number, in getFrame())
+    async function* packetize(stream) {
+      let childBuf = Buffer.alloc(0);
+  
+      for await (const buf of stream) {
+        childBuf = Buffer.concat([childBuf, buf]);
+        while (childBuf.length >= frameSize) {
+          let frameData = childBuf.subarray(0, frameSize);
+          childBuf = childBuf.subarray(frameSize);
+          yield frameData;
+        }
+      }
+    }
+  
+    this.childPacketIterator = packetize(this.child.stdout)[Symbol.asyncIterator]();
+  }
+
+  // XXX make it take the wanted frame nummber?
+  async getFrame() {
+    let item = await this.childPacketIterator.next();
+    if (item.done)
+      return null; // and perhaps make clean/error exit status available on anotehr method?
+    else
+      return item.value;
+  }
+}
+
+
+/*****************************************************************************/
 /* Main loop                                                                 */
 /*****************************************************************************/
 
@@ -278,7 +344,6 @@ class Layer {
 }
 
 import { application, default as express } from 'express';
-import { default as path } from 'path';
 import { fileURLToPath } from 'url';
 const port = 3000;
 function startServer(model) {
@@ -308,59 +373,46 @@ async function main() {
   let msPerFrame = 1000.0 / framesPerSecond;
   let totalPixels = model.outputSlotToPixel.length;
 
-  let toolConfiguration = {
-    framesPerSecond: framesPerSecond,
-    totalPixels: totalPixels,
-    model: model.toJSON(),
-  };
-
-
-  tmp.setGracefulCleanup();
-  const tmpobj = tmp.fileSync();
-  fs.writeSync(tmpobj.fd, JSON.stringify(toolConfiguration));
-  console.log('File: ', tmpobj.name);
-
-  let child = child_process.spawn('node', ['/Users/gschmidt/co/sandestin/tool-test.js', tmpobj.name]);
-  child.on('close', (code) => {
-    // XXX handle
-    console.log(`child process exited with code ${code}`);
-  });
-  child.on('error', (err) => {
-    console.log('Failed to start subprocess.');
-  });
-
-  let childBuf = Buffer.alloc(0);
-  child.stdout.on('data', (buf) => {
-    childBuf = Buffer.concat([childBuf, buf]);
-    console.log(`got ${buf.length} bytes from child, now ${childBuf.length} bytes buffered`);
-    let frameSize = 4 + 4 * totalPixels;
-    while (childBuf.length >= frameSize) {
-      let frameData = childBuf.subarray(0, frameSize);
-      childBuf = childBuf.subarray(frameSize);
-      console.log(`consumed ${frameData.length} bytes`);
-    }
-  });
 
   startServer(model);
 
-  // let mainObject = new RainbowSpotPattern;
   let mainObject = new LinearTopToBottomPattern;
+  let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree, 'patterns', 'tool-test.js')]);
+
+  // let mainObject = new RainbowSpotPattern;
   // let mainObject = new LinearRandomWalkPattern(15);
-  // let canvas = document.createElement('canvas');
 
   let lastFrameIndex = null;
   let startTime = Date.now();
+
   while (true) {
     // We should redo this at some point so that displayTime is actually the time the frame's
     // going to be displayed (for music sync purposes). Currently it's actually the time the
     // frame is rendered.
+    // XXX disregard above and rewrite this for new tool model
     let msSinceStart = (Date.now() - startTime);
     let frameIndex = Math.floor(msSinceStart / msPerFrame) + 1;
     let displayTimeMs = startTime + frameIndex * msPerFrame;
     let frame = new Frame(model, frameIndex, displayTimeMs / 1000);
     await sleep(displayTimeMs - Date.now());
 
-    let layer = mainObject.get(frame);
+    let frameData = await instrument.getFrame();
+    if (! frameData) {
+      console.log(`pattern exited`);
+      break;
+    }
+//    console.log(frameData);
+
+    // XXX check frame number, loop until we catch up, bail out if we fall too far behind
+    let layer = new Layer(frame.model);
+    for (let i = 0; i < frame.model.pixels.length; i ++) {
+      let r = frameData.readUint8(4 + i * 4 + 0);
+      let g = frameData.readUint8(4 + i * 4 + 1);
+      let b = frameData.readUint8(4 + i * 4 + 2);
+      let a = frameData.readUint8(4 + i * 4 + 3);
+      layer.setRGB(frame.model.pixels[i], [r, g, b]);
+    }
+
     await sendFrame(layer);
 
     if (lastFrameIndex !== null && lastFrameIndex !== frameIndex - 1) {
@@ -371,3 +423,13 @@ async function main() {
 }
 
 await main();
+
+// XXX mixer notes:
+// new_value = pixel * alpha + old_value * (1 - alpha)
+//
+// effective_alpha = pixel_alpha * layer_alpha
+// new_value = pixel * effective_alpha + old_value * (1 - effective_alpha)
+//
+// From backmost layer to frontmost layer
+// You can avoid divisions by doing one rescale per layer (which can be a multiplication)
+// At the end you get a double per LED channel which you could gamma correct if desired
