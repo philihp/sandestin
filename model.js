@@ -19,8 +19,17 @@ export class Pixel {
     model.modified = true;
   }
 
-  export() {
+  _export() {
     return this.point;
+  }
+
+  static _import(model, exportedPixels) {
+    for (let i = 0; i < exportedPixels.length; i ++) {
+      if (exportedPixels[i])
+        new Pixel(model, exportedPixels[i], i);
+      else
+        model.pixels[i] = undefined;
+    }
   }
 }
 
@@ -35,10 +44,17 @@ export class Node {
     model.modified = true;
   }
 
-  export() {
+  _export() {
     return {
       point: this.point,
       edges: this.edges.map(edge => edge.id)
+    }
+  }
+
+  static _import(model, exportedNodes) {
+    for (const exportedNode of exportedNodes) {
+      new Node(model, exportedNode.point);
+      // Edge information is redundant and will be recomputed when we import the edges
     }
   }
 }
@@ -73,11 +89,19 @@ export class Edge {
     model.modified = true;
   }
 
-  export() {
+  _export() {
     return {
       startNode: this.startNode.id,
       endNode: this.endNode.id,
       pixels: this.pixels.map(pixel => pixel.id)
+    }
+  }
+
+  static _import(model, exportedEdges) {
+    for (const exportedEdge of exportedEdges) {
+      const e = new Edge(model, model.nodes[exportedEdge.startNode],
+        model.nodes[exportedEdge.endNode], 0, null);
+      e.pixels = exportedEdge.pixels.map(id => model.pixels[id]);
     }
   }
 }
@@ -127,10 +151,17 @@ export class Model {
 
   export() {
     return {
-      pixels: this.pixels.map(pixel => pixel ? pixel.export() : null),
-      nodes: this.nodes.map(node => node.export()),
-      edges: this.edges.map(edge => edge.export())
+      pixels: this.pixels.map(pixel => pixel ? pixel._export() : null),
+      nodes: this.nodes.map(node => node._export()),
+      edges: this.edges.map(edge => edge._export())
     };
+  }
+
+  import(exportedModel) {
+    this._reset();
+    Pixel._import(this, exportedModel.pixels);
+    Node._import(this, exportedModel.nodes);
+    Edge._import(this, exportedModel.edges);
   }
 
 }

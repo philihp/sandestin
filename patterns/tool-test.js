@@ -2,6 +2,7 @@ import { Buffer } from 'buffer';
 import { default as fs } from 'fs';
 import { default as process } from 'process';
 
+import { Pixel, Node, Edge, Model } from '../model.js';
 import { sleep, dist } from '../utils.js';
 
 function writeAsyncToStream(stream, data) {
@@ -19,23 +20,12 @@ function writeAsyncToStream(stream, data) {
   });
 }
 
-function centerPoint(model) {
-  let min = [...model.pixels[0]];
-  let max = [...model.pixels[0]];
-
-  model.pixels.forEach(pixel => {
-    for (let i = 0; i < 3; i ++) {
-      min[i] = Math.min(min[i], pixel[i]);
-      max[i] = Math.max(max[i], pixel[i]);
-    }
-  });
-
-  return [0, 1, 2].map(i => (max[i] + min[i]) / 2);
-}
-
 async function main() {
   const config = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
   const pixelCount = config.model.pixels.length;
+
+  const model = new Model;
+  model.import(config.model);
 
   const buf = Buffer.alloc(4 + pixelCount * 4);
 
@@ -43,11 +33,11 @@ async function main() {
 
   let radius = 2;
   let rpm = 20;
-  let center = centerPoint(config.model);
   const pixelColors = [];
 
   for (let frameIndex = 0; ; frameIndex++) {
     let timeAngle = 2.0 * Math.PI * (frameIndex / config.framesPerSecond) / (60 / rpm);
+    let center = model.center();
     let cx = Math.cos(timeAngle) * radius + center[0];
     let cy = Math.sin(timeAngle) * radius + center[1];
     
