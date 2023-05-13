@@ -9,23 +9,22 @@ async function main() {
 
   const model = new Model;
   model.import(config.model);
-
-  console.error("hi from tool");
-
-  let radius = 2;
-  let rpm = 20;
   const pixelColors = [];
 
-  for (let frameIndex = 0; ; frameIndex++) {
+  console.error("Red spot pattern!");
+
+  const radius = 2;
+  const rpm = 20;
+  const center = model.center();
+
+  for (let frameIndex = 0; ; frameIndex ++) {
     let timeAngle = 2.0 * Math.PI * (frameIndex / config.framesPerSecond) / (60 / rpm);
-    let center = model.center();
     let cx = Math.cos(timeAngle) * radius + center[0];
     let cy = Math.sin(timeAngle) * radius + center[1];
     
-    for (let i = 0; i < config.model.pixels.length; i ++) {
-      let pixel = config.model.pixels[i];
-      let d = dist([cx, cy, pixel[2]], pixel);
-      pixelColors[i] = [Math.max(255 - d*200,0), 0, 0, 255];
+    for (const pixel of model.pixels) {
+      let d = dist([cx, cy, pixel.z], pixel.point);
+      pixelColors[pixel.outputChannel()] = [Math.max(255 - d * 200, 0), 0, 0, 255];
     };
 
     await writeFrame(frameIndex, pixelColors);

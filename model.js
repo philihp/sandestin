@@ -19,6 +19,10 @@ export class Pixel {
     model.modified = true;
   }
 
+  outputChannel() {
+    return this.id;
+  }
+
   _export() {
     return this.point;
   }

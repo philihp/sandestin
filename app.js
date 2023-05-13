@@ -374,7 +374,7 @@ async function main() {
   startServer(model);
 
   let mainObject = new LinearTopToBottomPattern;
-  let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree, 'patterns', 'tool-test.js')]);
+  let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree, 'patterns', 'red-spot.js')]);
 
   // let mainObject = new RainbowSpotPattern;
   // let mainObject = new LinearRandomWalkPattern(15);
