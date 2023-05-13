@@ -35,12 +35,11 @@ function centerPoint(model) {
 
 async function main() {
   const config = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-  const pixelCount = config.totalPixels;
+  const pixelCount = config.model.pixels.length;
 
   const buf = Buffer.alloc(4 + pixelCount * 4);
 
   console.error("hi from tool");
-  console.error(JSON.stringify(config));
 
   let radius = 2;
   let rpm = 20;

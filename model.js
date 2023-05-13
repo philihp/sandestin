@@ -19,7 +19,7 @@ export class Pixel {
     model.modified = true;
   }
 
-  toJSON() {
+  export() {
     return this.point;
   }
 }
@@ -35,7 +35,7 @@ export class Node {
     model.modified = true;
   }
 
-  toJSON() {
+  export() {
     return {
       point: this.point,
       edges: this.edges.map(edge => edge.id)
@@ -73,7 +73,7 @@ export class Edge {
     model.modified = true;
   }
 
-  toJSON() {
+  export() {
     return {
       startNode: this.startNode.id,
       endNode: this.endNode.id,
@@ -84,6 +84,10 @@ export class Edge {
 
 export class Model {
   constructor() {
+    this._reset();
+  }
+
+  _reset() {
     this.nodes = [];
     this.edges = [];
     this.pixels = [];
@@ -121,12 +125,13 @@ export class Model {
     return this.pixels.length;
   }
 
-  toJSON() {
+  export() {
     return {
-      pixels: this.pixels.map(pixel => pixel ? pixel.toJSON() : null),
-      nodes: this.nodes.map(node => node.toJSON()),
-      edges: this.edges.map(edge => edge.toJSON())
+      pixels: this.pixels.map(pixel => pixel ? pixel.export() : null),
+      nodes: this.nodes.map(node => node.export()),
+      edges: this.edges.map(edge => edge.export())
     };
   }
+
 }
    

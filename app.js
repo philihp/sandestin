@@ -261,8 +261,7 @@ class Instrument {
 
     const toolConfiguration = {
       framesPerSecond: framesPerSecond,
-      totalPixels: totalPixels,
-      model: model.toJSON(),
+      model: model.export(),
     };
   
     const tmpobj = tmp.fileSync();
@@ -354,7 +353,7 @@ function startServer(model) {
 
   // API
   app.get('/api/model', (req, res) => {
-    return res.send(JSON.stringify(model.toJSON()));
+    return res.send(JSON.stringify(model.export()));
   });
 
   // Start the server
