@@ -1,14 +1,12 @@
-function buildBuffer(layer, channelsPerPixel) {
+function buildBuffer(pixelColors, channelsPerPixel) {
   // Asssemble the frame data
-  let pixels = layer.model.pixels;
-  var buffer = Buffer.alloc(pixels.length * channelsPerPixel);
-  for (let i = 0; i < pixels.length; i ++) {
-    // XXX change the scale to [0,1]
-    // XXX apply alpha?
+  var buffer = Buffer.alloc(pixelColors.length * channelsPerPixel);
+  for (let i = 0; i < pixelColors.length; i ++) {
+    // XXX change the scale to [0,1]?
     let offset = i * channelsPerPixel;
-    buffer[offset ++] = Math.min(layer.colors[i * 4 + 1], 255); // green
-    buffer[offset ++] = Math.min(layer.colors[i * 4 + 0], 255); // red
-    buffer[offset ++] = Math.min(layer.colors[i * 4 + 2], 255); // blue
+    buffer[offset ++] = Math.min(pixelColors[i][1], 255); // green
+    buffer[offset ++] = Math.min(pixelColors[i][0], 255); // red
+    buffer[offset ++] = Math.min(pixelColors[i][2], 255); // blue
     if (channelsPerPixel === 4)
       buffer[offset] = 0; // placeholder for warm white
   }
@@ -51,11 +49,11 @@ import { default as e131 } from 'e131';
 const e131Client = new e131.Client('10.2.0.8');  // or use a universe
 const e131ChannelsPerPixel = 4; // XXX needs to be adjusted for zome vs rafters
 
-export function sendFrame(layer) {
+export function sendFrame(pixelColors) {
   return new Promise(resolve => {
-    let buffer = buildBuffer(layer, 3);
+    let buffer = buildBuffer(pixelColors, 3);
     let e131Buffer = 
-      (e131ChannelsPerPixel === 3 ? buffer : buildBuffer(layer, e131ChannelsPerPixel));
+      (e131ChannelsPerPixel === 3 ? buffer : buildBuffer(pixelColors, e131ChannelsPerPixel));
 
     // Enqueue for connected websockets
     wsConnections.forEach(ws => ws.send(buffer));

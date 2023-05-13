@@ -246,35 +246,6 @@ class Instrument {
 /* Main loop                                                                 */
 /*****************************************************************************/
 
-class Frame {
-  constructor(model, index, displayTime) {
-    this.model = model;
-    this.index = index;
-    this.displayTime = displayTime;
-  }
-}
-
-class Layer {
-  constructor(model) {
-    this.model = model;
-    this.colors = new Array(model.pixels.length * 4).fill(0);
-  }
-  setRGB(pixel, color) {
-    let offset = pixel.id * 4;
-    this.colors[offset ++] = color[0];
-    this.colors[offset ++] = color[1];
-    this.colors[offset ++] = color[2];
-    this.colors[offset] = 1; /* alpha */
-  }
-  setRGBA(pixel, color, alpha) {
-    let offset = pixel.id * 4;
-    this.colors[offset ++] = color[0];
-    this.colors[offset ++] = color[1];
-    this.colors[offset ++] = color[2];
-    this.colors[offset] = alpha;
-  }
-}
-
 import { application, default as express } from 'express';
 import { fileURLToPath } from 'url';
 const port = 3000;
@@ -311,6 +282,8 @@ async function main() {
   let lastFrameIndex = null;
   let startTime = Date.now();
 
+  const pixelColorsMixed = [];
+ 
   while (true) {
     // We should redo this at some point so that displayTime is actually the time the frame's
     // going to be displayed (for music sync purposes). Currently it's actually the time the
@@ -319,8 +292,11 @@ async function main() {
     let msSinceStart = (Date.now() - startTime);
     let frameIndex = Math.floor(msSinceStart / msPerFrame) + 1;
     let displayTimeMs = startTime + frameIndex * msPerFrame;
-    let frame = new Frame(model, frameIndex, displayTimeMs / 1000);
     await sleep(displayTimeMs - Date.now());
+
+    // Clear out the mixer framebuffer to black
+    for (let i = 0; i < model.pixelCount(); i ++)
+      pixelColorsMixed[i] = [0, 0, 0];
 
     let frameData = await instrument.getFrame();
     if (! frameData) {
@@ -330,16 +306,15 @@ async function main() {
 //    console.log(frameData);
 
     // XXX check frame number, loop until we catch up, bail out if we fall too far behind
-    let layer = new Layer(frame.model);
-    for (let i = 0; i < frame.model.pixels.length; i ++) {
+    for (let i = 0; i < model.pixelCount(); i ++) {
       let r = frameData.readUint8(4 + i * 4 + 0);
       let g = frameData.readUint8(4 + i * 4 + 1);
       let b = frameData.readUint8(4 + i * 4 + 2);
       let a = frameData.readUint8(4 + i * 4 + 3);
-      layer.setRGB(frame.model.pixels[i], [r, g, b]);
+      pixelColorsMixed[i] = [r, g, b]; // TODO: mix layers :)
     }
 
-    await sendFrame(layer);
+    await sendFrame(pixelColorsMixed);
 
     if (lastFrameIndex !== null && lastFrameIndex !== frameIndex - 1) {
       console.log(`warning: skipped frames from ${lastFrameIndex} to ${frameIndex}`);
