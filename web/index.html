@@ -34,6 +34,7 @@
       let camera, controls, scene, renderer, model, outputSlots;
       let frameCount = 0;
 
+      /* On startup, fetch the configuration from the server */
       fetch("/api/config", {
         method: "GET",
         headers: {
@@ -53,27 +54,48 @@
       })
       .catch(err => console.log(err));
 
+      function receiveMessage(event) {
+        frameCount ++;
+        document.querySelector("#counter").innerText =
+          `received ${frameCount} packets (${event.data.byteLength} bytes long)`;
+
+        let bytes = new Uint8Array(event.data);
+        if (outputSlots) {
+          for (let i = 0; i < bytes.length / 3; i ++) {
+            let color = ((bytes[i*3 + 1] * 256) + bytes[i*3]) * 256 + bytes[i*3 + 2]; //GRB
+            outputSlots[i].color.set(color); // this will be a SpriteMaterial
+          }
+        }
+      }
+
       function init(webSocketPort) {
         // I'm sure I'm doing this all wrong, but:
         // 1.6 meters is a rough estimate of the average height of human eyes above the ground
         const yOffset = -1.6;
 
         // Set up websocket
-        let webSocket = new WebSocket("ws://localhost:" + webSocketPort);
-        webSocket.binaryType = 'arraybuffer';
-        webSocket.onmessage = (event) => {
-          frameCount ++;
-          document.querySelector("#counter").innerText =
-            `received ${frameCount} packets (${event.data.byteLength} bytes long)`;
-
-          let bytes = new Uint8Array(event.data);
-          if (outputSlots) {
-            for (let i = 0; i < bytes.length / 3; i ++) {
-              let color = ((bytes[i*3 + 1] * 256) + bytes[i*3]) * 256 + bytes[i*3 + 2]; //GRB
-              outputSlots[i].color.set(color); // this will be a SpriteMaterial
+        let webSocket = null;
+        let isFirstConnection = true;
+        function tryConnectIfNotConnected() {
+          if (! webSocket || webSocket.readyState === 3 /* disconnected or connection failure */) {
+            console.log(`try connect ${webSocket && webSocket.readyState}`);
+            webSocket = new WebSocket("ws://localhost:" + webSocketPort);
+            webSocket.binaryType = 'arraybuffer';
+            webSocket.onopen = () => {
+              if (isFirstConnection)
+                isFirstConnection = false;
+              else
+                // Server went away, but now it's back. Force a reload to pick up any changes to our code or
+                // to the model. In the future, if we make the simulator more complicated/stateful, perhaps we
+                // would do something more sophisticated here.
+                location.reload();
             }
+            webSocket.onmessage = receiveMessage;
+            // perhaps refetch the model, or even reload the page, when the websocket reconnects?
           }
-        };
+        }
+        tryConnectIfNotConnected();
+        setInterval(tryConnectIfNotConnected, 1000);
 
         // Set up Three.js
         scene = new THREE.Scene();
