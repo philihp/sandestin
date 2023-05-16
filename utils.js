@@ -1,3 +1,6 @@
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+
 // "await sleep(1000)"
 export function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -47,3 +50,6 @@ export async function writeFrame(frameIndex, pixelColors) {
   await writeAsyncToStream(process.stdout, buf);
 }
 
+export function pathToRootOfTree() {
+  return path.dirname(fileURLToPath(import.meta.url));
+}

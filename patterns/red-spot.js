@@ -7,8 +7,7 @@ import { dist, writeFrame } from '../utils.js';
 async function main() {
   const config = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 
-  const model = new Model;
-  model.import(config.model);
+  const model = Model.import(config.model);
   const pixelColors = [];
 
   console.error("Red spot pattern!");

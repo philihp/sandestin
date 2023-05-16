@@ -1,101 +1,12 @@
-import { sleep, dist } from './utils.js';
+import { sleep, dist, pathToRootOfTree } from './utils.js';
 import { sendFrame } from './output.js';
-import { Pixel, Node, Edge, Model } from './model.js';
+import { Model } from './model.js';
 import { default as fs } from 'fs';
+import { readFile } from 'fs/promises';
 import { default as tmp } from 'tmp';
 tmp.setGracefulCleanup();
 import { default as path } from 'path';
 import { default as child_process } from 'child_process';
-
-function buildRafterModel() {
-  let model = new Model;
-  let inchesPerMeter = 39.3701;
-
-  // These are all in inches, but the actual coordinate system will be meters
-  let rafterSpacing = [31.5, 32.5, 31.25, 32.2, 33, 30];
-  let rafterLength = 3 * inchesPerMeter;
-  let rafterHeight = 7;
-  let pixelsPerRafter = 60 * 3; // 3 meters of 60 LED/meter pixel tape
-
-  let cumulativeDistance = 0;
-  let cumulativeOutputSlot = 0;
-  for (let rafter = 0; rafter <= rafterSpacing.length; rafter ++) {
-    for (let side = 0; side < 2; side ++) {
-      let start = new Node(model, [0, cumulativeDistance / inchesPerMeter,
-        side * rafterHeight / inchesPerMeter]);
-      let end = new Node(model, [rafterLength / inchesPerMeter, cumulativeDistance / inchesPerMeter,
-        side * rafterHeight / inchesPerMeter]);
-      new Edge(model, start, end, pixelsPerRafter, cumulativeOutputSlot);
-      cumulativeOutputSlot += pixelsPerRafter;
-    }
-
-    cumulativeDistance += rafterSpacing[rafter]; // will reference past end in final iteration
-  }
-
-  return model;
-}
-
-function buildModelFromObjFile(file) {
-  let model = new Model;
-  let verts = [null]; // Obj files are 1-based evidently
-  let scaleFactor = 1/1000; // Our obj files are in millimeters - standardize on meters
-
-  // XXX once we decide how to wire the physical structure, we will need to revise this function
-  // to assign the correct output slots (to match the physical DMX addresses) - but for now, the
-  // simulator is fine with any output slot to pixel mapping as long as it's consistent
-  let nextOutputSlot = 0;
-  let pixelsPerMeter = 60;
-
-  let alreadyAddedEdge = {};
-  function addFace(vertIndexes) {
-    function addEdge(index1, index2) {
-      let lower = Math.min(index1, index2);
-      let higher = Math.max(index1, index2);
-      let key = `${lower}~${higher}`;
-      if (! (key in alreadyAddedEdge)) {
-        let v1 = verts[lower];
-        let v2 = verts[higher];
-        // XXX need to revise to create both inner and outer pixels
-        let pixelsOnEdge = Math.round(pixelsPerMeter * dist(v1.point, v2.point));
-        new Edge(model, v1, v2, pixelsOnEdge, nextOutputSlot);
-        nextOutputSlot += pixelsOnEdge;
-        alreadyAddedEdge[key] = true;
-        console.log(`added edge with ${pixelsOnEdge} pixels`);
-      }
-    }
-
-    for (let i = 0; i < vertIndexes.length; i ++) {
-      addEdge(vertIndexes[i], vertIndexes[(i + 1) % vertIndexes.length]);
-    }
-  }
-
-  let lines = fs.readFileSync(file, 'utf-8').split(/\r?\n/);
-  for (let line of lines) {
-    let match;
-    if (match = line.match(/^\s*$/))
-      continue;
-    if (match = line.match(/^\s*\#/))
-      continue;
-    if (match = line.match(/^\s*v\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s*$/)) {
-      let v = new Node(model, [parseFloat(match[1]) * scaleFactor,
-        parseFloat(match[2]) * scaleFactor, parseFloat(match[3]) * scaleFactor]);
-      verts.push(v);
-      continue;
-    }
-    // Only supports quads and triangles for now
-    if (match = line.match(/^\s*f\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s*$/)) {
-      addFace([parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4])]);
-      continue;
-    }
-    if (match = line.match(/^\s*f\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s*$/)) {
-      addFace([parseInt(match[1]), parseInt(match[2]), parseInt(match[3])]);
-      continue;
-    }
-    throw new Error(`unhandled line in obj file: ${line}`);
-  }
-
-  return model;
-}
 
 /*****************************************************************************/
 /* Old patterns                                                              */
@@ -247,14 +158,12 @@ class Instrument {
 /*****************************************************************************/
 
 import { application, default as express } from 'express';
-import { fileURLToPath } from 'url';
 const port = 3000;
 function startServer(model) {
   let app = express();
 
   // Serve static assets
-  let pathToRootOfTree = path.dirname(fileURLToPath(import.meta.url))
-  app.use(express.static(path.join(pathToRootOfTree, 'web')));
+  app.use(express.static(path.join(pathToRootOfTree(), 'web')));
 
   // API
   app.get('/api/model', (req, res) => {
@@ -268,9 +177,13 @@ function startServer(model) {
 }
 
 async function main() {
-  let pathToRootOfTree = path.dirname(fileURLToPath(import.meta.url))
-  let model = buildModelFromObjFile(path.join(pathToRootOfTree, 'zome_3D.obj'));
+  /*
+  let model = await buildModelFromObjFile(path.join(pathToRootOfTree(), 'zome_3D.obj'));
   console.log(`Model has ${model.nodes.length} nodes, ${model.edges.length} edges, and ${model.pixels.length} pixels`);
+  */
+//  console.log(readFile(path.join(pathToRootOfTree(), "rafter.model")));
+
+  const model = Model.import(JSON.parse(await readFile(path.join(pathToRootOfTree(), 'models', 'zome.model'))));
 
   let framesPerSecond = 40;
   let msPerFrame = 1000.0 / framesPerSecond;
@@ -278,7 +191,7 @@ async function main() {
 
   startServer(model);
 
-  let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree, 'patterns', 'rainbow-spot.js')]);
+  let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree(), 'patterns', 'rainbow-spot.js')]);
   let lastFrameIndex = null;
   let startTime = Date.now();
 

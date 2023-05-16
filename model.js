@@ -112,10 +112,6 @@ export class Edge {
 
 export class Model {
   constructor() {
-    this._reset();
-  }
-
-  _reset() {
     this.nodes = [];
     this.edges = [];
     this.pixels = [];
@@ -161,11 +157,14 @@ export class Model {
     };
   }
 
-  import(exportedModel) {
-    this._reset();
-    Pixel._import(this, exportedModel.pixels);
-    Node._import(this, exportedModel.nodes);
-    Edge._import(this, exportedModel.edges);
+  static import(exportedModel) {
+    const model = new Model;
+
+    Pixel._import(model, exportedModel.pixels);
+    Node._import(model, exportedModel.nodes);
+    Edge._import(model, exportedModel.edges);
+
+    return model;
   }
 
 }
