@@ -1,6 +1,9 @@
 model = "models/zome.model"
 framesPerSecond = 40
 
+[simulator]
+port = 3000
+
 [[outputs]]
 # 10.2.0.8 is geoff-f48-2.int.monument.house
 # We hardcode the IP because if we don't, a bug somewhere causes a DNS

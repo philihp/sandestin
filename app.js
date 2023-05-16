@@ -155,27 +155,43 @@ class Instrument {
 
 
 /*****************************************************************************/
-/* Main loop                                                                 */
+/* Simulator                                                                 */
 /*****************************************************************************/
 
 import { application, default as express } from 'express';
-const port = 3000;
-function startServer(model) {
-  let app = express();
 
-  // Serve static assets
-  app.use(express.static(path.join(pathToRootOfTree(), 'web')));
+class Simulator {
+  constructor(config, model) {
+    this.model = model;
+    this.port = config.port || 3000;
+    this.webSocketPort = config.webSocketPort || this.port + 1;
+    this._app = express();
 
-  // API
-  app.get('/api/model', (req, res) => {
-    return res.send(JSON.stringify(model.export()));
-  });
+    // XXX need to pass webSocketPort into webapp
 
-  // Start the server
-  app.listen(port, () => {
-    console.log(`Web interface on http://localhost:${port}`)
-  })
+    // Serve static assets
+    this._app.use(express.static(path.join(pathToRootOfTree(), 'web')));
+  
+    // API
+    this._app.get('/api/config', (req, res) => {
+      const config = {
+        webSocketPort: this.webSocketPort,
+        model: this.model.export()
+      };
+      return res.send(JSON.stringify(config));
+    });
+  
+    // Start the server
+    this._app.listen(this.port, () => {
+      console.log(`Web interface on http://localhost:${this.port}`)
+    })
+  
+  }
 }
+
+/*****************************************************************************/
+/* Main loop                                                                 */
+/*****************************************************************************/
 
 async function main() {
   // XXX take config file as command line argument
@@ -184,15 +200,15 @@ async function main() {
   const config = toml.parse(await readFile(configPath));
 
   const model = Model.import(JSON.parse(await readFile(path.join(configDir, config.model))));
+  const simulator = config.simulator ? new Simulator(config.simulator, model) : null;
 
   let framesPerSecond = config.framesPerSecond;
   let msPerFrame = 1000.0 / framesPerSecond;
   let totalPixels = model.pixelCount();
 
-  startServer(model);
-
   const outputs = [];
-  outputs.push(new WebSocketOutput); // XXX allow port configuration
+  if (simulator)
+    outputs.push(new WebSocketOutput(simulator.webSocketPort));
   for (const outputConfig of (config.outputs || [])) {
     switch (outputConfig.type) {
       case 'e131':

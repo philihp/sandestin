@@ -37,7 +37,7 @@
 
 			let camera, controls, scene, renderer, model, outputSlots;
 
-      fetch("/api/model", {
+      fetch("/api/config", {
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -46,35 +46,45 @@
 //          body: JSON.stringify({test: "stuff"})
         })
           .then(res => res.json())
-          .then(data => {
-            console.log(data);
-            model = data;
+          .then(config => {
+            console.log(config);
+            model = config.model;
+			var webSocketPort = config.webSocketPort;
             document.querySelector("#message").innerText =
-              `loaded geometry - ${data.pixels.length} pixels`;
-            init();
+              `loaded geometry - ${model.pixels.length} pixels`;
+            init(webSocketPort);
           })
           .catch(err => console.log(err));
 
-      let frameCount = 0;
-      let webSocket = new WebSocket("ws://localhost:3001");
-      webSocket.binaryType = 'arraybuffer';
-      webSocket.onmessage = (event) => {
-        frameCount++;
-        document.querySelector("#counter").innerText =
-          `received ${frameCount} packets (${event.data.byteLength} bytes long)`;
-        let bytes = new Uint8Array(event.data);
-        if (outputSlots) {
-          for (let i = 0; i < bytes.length / 3; i ++) {
-            let color = ((bytes[i*3 + 1] * 256) + bytes[i*3]) * 256 + bytes[i*3 + 2]; //GRB
-            outputSlots[i].color.set(color); // this will be a SpriteMaterial
-          }
-        }
-        if (frameCount === 1)
-          console.log(bytes);
+		  let frameCount = 0;
 
-      };
 
-			function init() {
+			function init(webSocketPort) {
+
+
+				let webSocket = new WebSocket("ws://localhost:" + webSocketPort);
+				webSocket.binaryType = 'arraybuffer';
+				webSocket.onmessage = (event) => {
+					frameCount++;
+					document.querySelector("#counter").innerText =
+					`received ${frameCount} packets (${event.data.byteLength} bytes long)`;
+					let bytes = new Uint8Array(event.data);
+					if (outputSlots) {
+					for (let i = 0; i < bytes.length / 3; i ++) {
+						let color = ((bytes[i*3 + 1] * 256) + bytes[i*3]) * 256 + bytes[i*3 + 2]; //GRB
+						outputSlots[i].color.set(color); // this will be a SpriteMaterial
+					}
+					}
+					if (frameCount === 1)
+					console.log(bytes);
+
+				};
+
+
+
+
+
+
 				scene = new THREE.Scene();
 				scene.background = new THREE.Color( 0x000000 );
 
