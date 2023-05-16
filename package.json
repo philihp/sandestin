@@ -5,6 +5,7 @@
     "express": "^4.18.1",
     "hsv-rgb": "^1.0.0",
     "tmp": "^0.2.1",
+    "toml": "^3.0.0",
     "ws": "^8.8.0"
   },
   "optionalDependencies": {

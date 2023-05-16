@@ -1,5 +1,5 @@
-import { sleep, dist, pathToRootOfTree } from './utils.js';
-import { sendFrame } from './output.js';
+import { sleep, pathToRootOfTree } from './utils.js';
+import { E131Output, WebSocketOutput, sendFrame } from './output.js';
 import { Model } from './model.js';
 import { default as fs } from 'fs';
 import { readFile } from 'fs/promises';
@@ -7,6 +7,7 @@ import { default as tmp } from 'tmp';
 tmp.setGracefulCleanup();
 import { default as path } from 'path';
 import { default as child_process } from 'child_process';
+import { default as toml } from 'toml';
 
 /*****************************************************************************/
 /* Old patterns                                                              */
@@ -177,19 +178,30 @@ function startServer(model) {
 }
 
 async function main() {
-  /*
-  let model = await buildModelFromObjFile(path.join(pathToRootOfTree(), 'zome_3D.obj'));
-  console.log(`Model has ${model.nodes.length} nodes, ${model.edges.length} edges, and ${model.pixels.length} pixels`);
-  */
-//  console.log(readFile(path.join(pathToRootOfTree(), "rafter.model")));
+  // XXX take config file as command line argument
+  const configPath = path.join(pathToRootOfTree(), 'config.toml');
+  const configDir = path.dirname(configPath);
+  const config = toml.parse(await readFile(configPath));
 
-  const model = Model.import(JSON.parse(await readFile(path.join(pathToRootOfTree(), 'models', 'zome.model'))));
+  const model = Model.import(JSON.parse(await readFile(path.join(configDir, config.model))));
 
-  let framesPerSecond = 40;
+  let framesPerSecond = config.framesPerSecond;
   let msPerFrame = 1000.0 / framesPerSecond;
   let totalPixels = model.pixelCount();
 
   startServer(model);
+
+  const outputs = [];
+  outputs.push(new WebSocketOutput); // XXX allow port configuration
+  for (const outputConfig of (config.outputs || [])) {
+    switch (outputConfig.type) {
+      case 'e131':
+        outputs.push(new E131Output(outputConfig.host, outputConfig.channels));
+        break;
+      default:
+        throw new Error(`Unknown output type '${outputConfig.type}'`);
+    }
+  }
 
   let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree(), 'patterns', 'rainbow-spot.js')]);
   let lastFrameIndex = null;
@@ -227,7 +239,7 @@ async function main() {
       pixelColorsMixed[i] = [r, g, b]; // TODO: mix layers :)
     }
 
-    await sendFrame(pixelColorsMixed);
+    await sendFrame(pixelColorsMixed, outputs);
 
     if (lastFrameIndex !== null && lastFrameIndex !== frameIndex - 1) {
       console.log(`warning: skipped frames from ${lastFrameIndex} to ${frameIndex}`);
