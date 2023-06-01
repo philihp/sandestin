@@ -1,98 +1,173 @@
-function buildBuffer(layer, channelsPerPixel) {
-  // Asssemble the frame data
-  let pixels = layer.model.pixels;
-  var buffer = Buffer.alloc(pixels.length * channelsPerPixel);
-  for (let i = 0; i < pixels.length; i ++) {
-    // XXX change the scale to [0,1]
-    // XXX apply alpha?
-    let offset = pixels[i].outputSlot * channelsPerPixel;
-    buffer[offset ++] = Math.min(layer.colors[i * 4 + 1], 255); // green
-    buffer[offset ++] = Math.min(layer.colors[i * 4 + 0], 255); // red
-    buffer[offset ++] = Math.min(layer.colors[i * 4 + 2], 255); // blue
-    if (channelsPerPixel === 4)
-      buffer[offset] = 0; // placeholder for warm white
-  }
-  
-  return buffer;
-}
-
 /*****************************************************************************/
-/* WebSocket (for simulator)                                                 */
-/*****************************************************************************/
-
-import { WebSocketServer } from 'ws';
-const wss = new WebSocketServer({ port: 3001 }); // XXX clean up
-
-let wsConnections = new Set;
-
-wss.on('connection', ws => {
-  ws.on('message', data => {
-    // Ignore incoming websocket messages for now
-  });
-
-  ws.on('close', (code, reason) => {
-    console.log(`Connection closed: ${code} ${reason}`)
-    wsConnections.delete(ws);
-  });
-
-  wsConnections.add(ws);
-});
-
-/*****************************************************************************/
-/* E131 output (and main entry point)                                        */
+/* E131 devices                                                              */
 /*****************************************************************************/
 
 import { default as e131 } from 'e131';
 
-// XXX move these to an appropriate place
-// 10.2.0.8 is geoff-f48-2.int.monument.house
-// We hardcode the IP because if we don't, a bug somewhere causes a DNS
-// lookup for each and every e131 packet sent. This is a "good enough" fix
-const e131Client = new e131.Client('10.2.0.8');  // or use a universe
-const e131ChannelsPerPixel = 4; // XXX needs to be adjusted for zome vs rafters
+export class E131Output {
+  constructor(host, format) {
+    this.host = host; // XXX do DNS resolution and also pull out port if any
+    this._format = format;
+    this.e131Client = new e131.Client(this.host);  // or use a universe
+  }
 
-export function sendFrame(layer) {
-  return new Promise(resolve => {
-    let buffer = buildBuffer(layer, 3);
-    let e131Buffer = 
-      (e131ChannelsPerPixel === 3 ? buffer : buildBuffer(layer, e131ChannelsPerPixel));
+  _sendFrame(buffer) {
+    const self = this;
 
-    // Enqueue for connected websockets
-    wsConnections.forEach(ws => ws.send(buffer));
-
-    // Now send to E131    
-    var i = 0;
-    var pos = 0;
-
-    var startUniverse = 1;
-    var thisUniverse = startUniverse;
-    var channelsPerUniverse = 510;
-    var packets = [];
-    var totalChannels = e131Buffer.length;
-    for (let idx = 0; idx < totalChannels; ) {
-      var theseChannels = Math.min(totalChannels - idx, channelsPerUniverse);
-      var p = e131Client.createPacket(theseChannels);
-      p.setSourceName('sandestin');
-      p.setUniverse(thisUniverse);
-      p.setPriority(p.DEFAULT_PRIORITY);  // not strictly needed, done automatically
-      packets.push(p);
-      idx += theseChannels;
-      thisUniverse ++;
-    }
-    
-    function sendNextPacket() {
-      if (i === packets.length) {
-        resolve();
-      } else {
-        var p = packets[i];
-        i += 1;
-        var slotsData = p.getSlotsData();
-        e131Buffer.copy(slotsData, 0, pos);
-        pos += slotsData.length;
-        e131Client.send(p, sendNextPacket);
+    return new Promise(resolve => {
+      var i = 0;
+      var pos = 0;
+  
+      var startUniverse = 1;
+      var thisUniverse = startUniverse;
+      var channelsPerUniverse = 510;
+      var packets = [];
+      var totalChannels = buffer.length;
+      for (let idx = 0; idx < totalChannels; ) {
+        var theseChannels = Math.min(totalChannels - idx, channelsPerUniverse);
+        var p = this.e131Client.createPacket(theseChannels);
+        p.setSourceName('sandestin');
+        p.setUniverse(thisUniverse);
+        p.setPriority(p.DEFAULT_PRIORITY);  // not strictly needed, done automatically
+        packets.push(p);
+        idx += theseChannels;
+        thisUniverse ++;
       }
-    } 
+      
+      function sendNextPacket() {
+        if (i === packets.length) {
+          resolve();
+        } else {
+          var p = packets[i];
+          i += 1;
+          var slotsData = p.getSlotsData();
+          buffer.copy(slotsData, 0, pos);
+          pos += slotsData.length;
+          self.e131Client.send(p, sendNextPacket);
+        }
+      } 
+  
+      sendNextPacket();
+    });
+  }
+}
 
-    sendNextPacket();
-  });
+/*****************************************************************************/
+/* WebSocket server (for simulator)                                          */
+/*****************************************************************************/
+
+import { WebSocketServer } from 'ws';
+
+export class WebSocketOutput {
+  constructor(port, format) { // XXX automatically allocate port? but we also want auto-reconnect..
+    this.port = port || 3001;
+    this._server = new WebSocketServer({ port: this.port });
+    this._format = format || "grb";
+    this._connections = new Set;
+
+    this._server.on('connection', ws => {
+      this._server.on('message', data => {
+        // Ignore incoming websocket messages for now
+      });
+    
+      this._server.on('close', (code, reason) => {
+        console.log(`Connection closed: ${code} ${reason}`)
+        this._connections.delete(ws);
+      });
+    
+      this._connections.add(ws);
+    });
+  }
+
+  async _sendFrame(buffer) {
+    const promises = [];
+
+    for (const ws of this._connections)
+      promises.push(new Promise(resolve => { ws.send(buffer, {}, resolve) } ));
+
+    await Promise.all(promises);
+  }
+}
+
+/*****************************************************************************/
+/* Sending frames                                                            */
+/*****************************************************************************/
+
+const parseFormatCache = {};
+function parseFormat(format) {
+  function _parseFormat(format) {
+    const keys = {r: 0, g: 1, b: 2, '-': null};
+    const channelMap = [];
+    const paddingChannels = 0;
+
+    for (let i = 0; i < format.length; i ++) {
+      const channel = keys[format.toLowerCase()[i]];
+      if (channel === undefined)
+        throw new Error(`Bad pixel format ${format}: allowed characters are 'r', 'g', 'b', and '-' (for padding, eg, warm white)`);
+      if (paddingChannels > 0 && channel !== null)
+        throw new Error(`Bad pixel format ${format}: padding channels may only appear at the end of the string`);
+      if (channel === null)
+        paddingChannels ++;
+      else
+        channelMap.push(channel);
+    }
+
+    if (channelMap.length !== 3)
+      throw new Error(`Bad pixel format ${format}: each of 'r', 'g', and 'b' must appear once`);
+
+    if (paddingChannels > 2)
+      // If you increase the limit adjust the unrolled loop in `buildBuffer`
+      throw new Error(`Bad pixel format ${format}: there is a limit of two padding channels`);
+
+    return {
+      channelMap: channelMap,
+      paddingChannels: paddingChannels,
+      channelsPerPixel: channelMap.length + paddingChannels
+    };
+  }
+
+  let parsed = parseFormatCache[format];
+  if (! parsed)
+    parsed = parseFormatCache[format] = _parseFormat(format);
+  return parsed;
+}
+
+function buildBuffer(pixelColors, parsedFormat) {
+  const totalChannels = pixelColors.length * parsedFormat.channelsPerPixel;
+
+  // Asssemble the frame data
+  var buffer = Buffer.alloc(totalChannels);
+  let offset = 0;
+  for (let i = 0; i < pixelColors.length; i ++) {
+    buffer[offset ++] = pixelColors[i][parsedFormat.channelMap[0]];
+    buffer[offset ++] = pixelColors[i][parsedFormat.channelMap[1]];
+    buffer[offset ++] = pixelColors[i][parsedFormat.channelMap[2]];
+    if (parsedFormat.paddingChannels > 0)
+      buffer[offset ++] = 0;
+    if (parsedFormat.paddingChannels > 1)
+      buffer[offset ++] = 0;
+  }
+
+  if (offset !== totalChannels)
+    throw new Error("didn't output right number of channels?");
+  
+  return buffer;
+}
+
+// - outputs: an array of XXXOutput objects
+// - pixelColors: an array of RGB colors (each channel in the range 0-255)
+//   eg: [[12, 45, 255], [0, 255, 0], ...]
+export async function sendFrame(pixelColors, outputs) {
+  const bufferCache = {};
+  const promises = [];
+
+  for (const output of outputs) {
+    let format = output._format;
+    let buffer = bufferCache[format];
+    if (! buffer)
+      buffer = bufferCache[format] = buildBuffer(pixelColors, parseFormat(format));
+    promises.push(output._sendFrame(buffer));
+  }
+
+  await Promise.all(promises);
 }
