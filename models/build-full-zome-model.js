@@ -4,6 +4,32 @@ import { dist, pathToRootOfTree } from '../utils.js';
 import { readObjFile } from './read-obj-file.js';
 import * as path from 'path';
 
+/* Zome address map (assuming standard zome.obj):
+
+(1) There are 10 receiver boxes, each at a bottom vertex, numbered 0-9
+    clockwise around the zome. (Clockwise as seen from above, or in other
+    words, the direction you go if you walk around the zome with it on
+    your right hand side.) The zome is rotationally symmetric so it
+    doesn't matter which one is 0.
+(2) Each receiver board has four ports:
+    Port 0: Clockwise outer, 360 pixels
+    Port 1: Clockwise inner, 360 pixels
+    Port 2: Counterclockwise outer, 315 pixels
+    Port 3: Counterclockwise inner, 315 pixels
+(3) LEDs are mapped to consecutive addresses: to receivers 0-9 in
+    ascending (clockwise) order, then within a receiver to ports 0-3
+    in ascending order, then on an individual strand, from the bottom
+    of the sturcture to the top.
+
+Geometry:
+
+(1) The Z axis points up (the elevation, from the ground to the sky.)
+(2) Units are in meters.
+
+*/
+
+// XXX check that I got clockwise/counterclockwise directions right
+
 const EPSILON = .1; // 1 centimeter
 const PI = Math.PI;
 const METERS_PER_INCH = .0254;
@@ -27,7 +53,7 @@ function findNextVert(vert, accept) {
       continue; // consider upward movements only
 
       if (v.cyl.r <= EPSILON) {
-      // This edge leads to the center
+      // This edge leads to the center, where theta is undefined
       if (accept.center)
         return v;
       continue;
@@ -114,7 +140,6 @@ async function buildZomeFromObjFile(pathToObjFile) {
       new Edge(model, from[nodeKey], to[nodeKey], pixelsOnEdge, nextOutputSlot);
       nextOutputSlot += pixelsOnEdge;
 
-      // XXX front and back
       from = to;
     }
 
