@@ -1,0 +1,20 @@
+Test that E131 output still works (3 channel and 4 channel)
+Take config file on command line
+Make sure temp files are getting cleaned up
+Resolve DNS names in e131 config
+Set correct outputSlots in zome model
+Add inner and outer LEDs and render based on normal
+ - eg: https://jsfiddle.net/prisoner849/Lgd0sm1q/
+Multiple layers / mixers
+ - As you do this: straighten out/finalize frame timing rules
+Gamma correction / dithering
+MIDI (?) control of layer parameters (eg: APC40 or AP40+midi keyboard)
+Demonstrate Ableton control
+Add ability to play back mp3s with synchronized midi events
+Free-running random mode (alternative to Ableton)
+More flexible (modular patch based) approach to pattern definiton
+ - eg, space/time warps composed with a 1D field function composed with a palette
+Package up as Electron app and distribute?
+
+
+Write cool patterns
