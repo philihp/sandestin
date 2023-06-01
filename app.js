@@ -167,8 +167,6 @@ class Simulator {
     this.webSocketPort = config.webSocketPort || this.port + 1;
     this._app = express();
 
-    // XXX need to pass webSocketPort into webapp
-
     // Serve static assets
     this._app.use(express.static(path.join(pathToRootOfTree(), 'web')));
   
@@ -204,7 +202,6 @@ async function main() {
 
   let framesPerSecond = config.framesPerSecond;
   let msPerFrame = 1000.0 / framesPerSecond;
-  let totalPixels = model.pixelCount();
 
   const outputs = [];
   if (simulator)
@@ -219,7 +216,7 @@ async function main() {
     }
   }
 
-  let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree(), 'patterns', 'rainbow-spot.js')]);
+  let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree(), 'patterns', 'address-test.js')]);
   let lastFrameIndex = null;
   let startTime = Date.now();
 

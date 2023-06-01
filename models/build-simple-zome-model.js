@@ -67,7 +67,7 @@ async function buildModelFromObjFile(file) {
   
 async function main() {
   const model = await buildModelFromObjFile(path.join(pathToRootOfTree(), 'models', 'zome.obj'));
-  const filename = path.join(pathToRootOfTree(), 'models', 'zome.model');
+  const filename = path.join(pathToRootOfTree(), 'models', 'simple-zome.model');
   await writeFile(filename, JSON.stringify(model.export()));
 }
 
