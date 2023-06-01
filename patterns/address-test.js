@@ -12,8 +12,8 @@ async function main() {
 
   console.error("Address test pattern!");
 
-  const speed = 2.0;
-  const length = 250;
+  const speed = 5.0;
+  const length = 500;
 
   for (let frameIndex = 0; ; frameIndex ++) {
     const startChannel = Math.floor((frameIndex * speed) % model.pixels.length);
