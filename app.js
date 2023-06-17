@@ -114,6 +114,7 @@ class Instrument {
     fs.writeSync(tmpobj.fd, JSON.stringify(toolConfiguration));
 
     this.child = child_process.spawn(program, [...args, tmpobj.name]);
+    console.log(tmpobj.name);
     this.child.on('close', (code) => {
       // XXX handle this?
       console.log(`child process exited with code ${code}`);
@@ -216,7 +217,7 @@ async function main() {
     }
   }
 
-  // let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree(), 'patterns', 'address-test.js')]);
+  // let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree(), 'patterns', 'rainbow-spot.js')]);
   let instrument = new Instrument(model, framesPerSecond, 'python', [path.join(pathToRootOfTree(), 'patterns', 'top_down.py')]);
 
   let lastFrameIndex = null;

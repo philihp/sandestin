@@ -20,12 +20,11 @@ class Zome:
         self.pixels = model_json['model']['pixels']
         self.num_pixels = len(self.pixels)
         self.fps = model_json['framesPerSecond']
-    
-    def center(self):
-        return np.array(self.nodes[0]["point"])/ 2
-    
+        
     def top(self):
-        return self.nodes[0]["point"]
+        all_z = [self.nodes[i]['point'][2] for i in range(len(self.nodes))]
+        top = [0.0, 0.0, np.max(all_z)]
+        return top 
 
 
 def transform_to_byte_str(frame_id: int, rgba_values: list) -> str:
@@ -52,7 +51,6 @@ def red_pattern(zome):
         sys.stdout.buffer.write(msg)
         frame_id+=1
 
-
 def top_down_pattern(zome):
     total_time_sec = 5 # TODO: can be a variable
     total_frames = total_time_sec * zome.fps
@@ -70,19 +68,21 @@ def top_down_pattern(zome):
                 if p[2] > thresholdZ:
                     brightness = 1 - (p[2] - thresholdZ) / (topZ * length_factor)
                     if brightness > 0:
-                        # print(color,  brightness)
                         color = template_color * brightness
                         color = color.astype(int)
-                        # print("after", color)
                         rgba_values[i] = list(color) + [alpha] # combine the RGB, and alpha
-                        print(rgba_values[i])
+                        # print(color,  brightness)
+
+                        # sys.stderr.write(rgba_values[i])
             msg = transform_to_byte_str(frame_id, rgba_values)
             sys.stdout.buffer.write(msg)
             frame_id += 1
 
+
     
 
 if __name__ == "__main__":
+    sys.stderr.write(f"loading file {args.model_file}\n")
     zome = Zome(args.model_file)
     # red_pattern(zome=zome)
     top_down_pattern(zome=zome)
