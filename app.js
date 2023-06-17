@@ -219,6 +219,7 @@ async function main() {
 
   // let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree(), 'patterns', 'rainbow-spot.js')]);
   let instrument = new Instrument(model, framesPerSecond, 'python3', [path.join(pathToRootOfTree(), 'patterns', 'img_2d_projection.py')]);
+  // let instrument = new Instrument(model, framesPerSecond, 'python3', [path.join(pathToRootOfTree(), 'patterns', 'top_down_white.py')]);
 
   let lastFrameIndex = null;
   let startTime = Date.now();

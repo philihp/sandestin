@@ -39,15 +39,13 @@ def top_down_pattern(zome):
                         rgba_values[i] = list(color) + [alpha] # combine the RGB, and alpha
                         # print(color,  brightness)
             msg = transform_to_byte_str(frame_id, rgba_values)
-            sys.stdout.buffer.write(msg)
+            sys.stdout.buffer.write(msg) # this writes to the stdout which will be read by the app.js to send the frame. 
             frame_id += 1
 
     
 
 if __name__ == "__main__":
-    sys.stderr.write(f"loading file {args.model_file}\n")
     zome = Zome(args.model_file)
-    # red_pattern(zome=zome)
     top_down_pattern(zome=zome)
 
 
