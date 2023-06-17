@@ -21,38 +21,39 @@ def pattern(zome):
     alpha = 255 #TODO: can be a variable 
     frame_id = 0
     img_dir = os.path.dirname(__file__) + '/../media/'
-    for f in os.listdir(img_dir):
-        if not (f.endswith('jpeg') or f.endswith('png') or f.endswith('jpg')):
-            continue
-        img_path = os.path.join(img_dir, f)
-        img = np.asarray(Image.open(img_path))
-        img_dim = img.shape
-        img_center = np.array(img.shape)/2.0
-        for _ in range(total_frames):
-            zoom_factor = min([1, 0.1+np.sqrt((frame_id % total_frames) / total_frames)]) # how much the img zoom in 
-            rotate_angle = np.sin(frame_id / zome.fps) # how much the img rotate
-            rotation_matrix = np.array([[np.cos(rotate_angle), -np.sin(rotate_angle)],
-                            [np.sin(rotate_angle), np.cos(rotate_angle)]])
-            rgba_values = np.zeros((zome.num_pixels, 4)).astype(int) #initialize with all zeros 
-            zoomed_width = int(img_dim[0] * zoom_factor)
-            zoomed_height = int(img_dim[1] * zoom_factor)
-            zoomed_x = int(img_center[0] - zoomed_width / 2)
-            zoomed_y = int(img_center[1] - zoomed_height / 2)
+    while True: 
+        for f in os.listdir(img_dir):
+            if not (f.endswith('jpeg') or f.endswith('png') or f.endswith('jpg')):
+                continue
+            img_path = os.path.join(img_dir, f)
+            img = np.asarray(Image.open(img_path))
+            img_dim = img.shape
+            img_center = np.array(img.shape)/2.0
+            for _ in range(total_frames):
+                zoom_factor = min([1, 0.1+np.sqrt((frame_id % total_frames) / total_frames)]) # how much the img zoom in 
+                rotate_angle = np.sin(frame_id / zome.fps) # how much the img rotate
+                rotation_matrix = np.array([[np.cos(rotate_angle), -np.sin(rotate_angle)],
+                                [np.sin(rotate_angle), np.cos(rotate_angle)]])
+                rgba_values = np.zeros((zome.num_pixels, 4)).astype(int) #initialize with all zeros 
+                zoomed_width = int(img_dim[0] * zoom_factor)
+                zoomed_height = int(img_dim[1] * zoom_factor)
+                zoomed_x = int(img_center[0] - zoomed_width / 2)
+                zoomed_y = int(img_center[1] - zoomed_height / 2)
 
-            zoomed_img = img[zoomed_y:zoomed_y + zoomed_height, zoomed_x:zoomed_x + zoomed_width]
-            zoomed_img_dim = zoomed_img.shape 
-            for i, p in enumerate(zome.pixels):
-                
-                ind_x = int(min([zoomed_img_dim[0], (p[0] + max_x)/(2*max_x) * zoomed_img_dim[0]]))
-                ind_y = int(min([zoomed_img_dim[1], (p[1] + max_y)/(2*max_y) * zoomed_img_dim[1]]))
-                rotate_indices = np.dot(rotation_matrix, [ind_x, ind_y])
-                new_ind_x = int(min([rotate_indices[0], img_dim[0]-1] ))
-                new_ind_y = int(min([rotate_indices[1], img_dim[1]-1] ))
-                color = img[new_ind_x, new_ind_y]
-                rgba_values[i] = list(color) + [alpha] # combine the RGB, and alpha
-            msg = transform_to_byte_str(frame_id, rgba_values)
-            sys.stdout.buffer.write(msg) # this writes to the stdout which will be read by the app.js to send the frame. 
-            frame_id += 1
+                zoomed_img = img[zoomed_y:zoomed_y + zoomed_height, zoomed_x:zoomed_x + zoomed_width]
+                zoomed_img_dim = zoomed_img.shape 
+                for i, p in enumerate(zome.pixels):
+                    
+                    ind_x = int(min([zoomed_img_dim[0], (p[0] + max_x)/(2*max_x) * zoomed_img_dim[0]]))
+                    ind_y = int(min([zoomed_img_dim[1], (p[1] + max_y)/(2*max_y) * zoomed_img_dim[1]]))
+                    rotate_indices = np.dot(rotation_matrix, [ind_x, ind_y])
+                    new_ind_x = int(min([rotate_indices[0], img_dim[0]-1] ))
+                    new_ind_y = int(min([rotate_indices[1], img_dim[1]-1] ))
+                    color = img[new_ind_x, new_ind_y]
+                    rgba_values[i] = list(color) + [alpha] # combine the RGB, and alpha
+                msg = transform_to_byte_str(frame_id, rgba_values)
+                sys.stdout.buffer.write(msg) # this writes to the stdout which will be read by the app.js to send the frame. 
+                frame_id += 1
 
 if __name__ == "__main__":
     zome = Zome(args.model_file)
