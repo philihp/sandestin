@@ -11,15 +11,18 @@ class Zome:
         self.pixels = model_json['model']['pixels']
         self.num_pixels = len(self.pixels)
         self.fps = model_json['framesPerSecond']
-        
+
+    @property
     def height(self):
         all_z = [self.nodes[i]['point'][2] for i in range(len(self.nodes))]
         return np.max(all_z) 
-
+    
+    @property
     def width_x(self):
         all_x = [self.nodes[i]['point'][0] for i in range(len(self.nodes))]
         return np.max(all_x) 
-     
+    
+    @property
     def width_y(self):
         all_y = [self.nodes[i]['point'][1] for i in range(len(self.nodes))]
         return np.max(all_y) 

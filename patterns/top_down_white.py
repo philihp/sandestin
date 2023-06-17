@@ -13,7 +13,7 @@ args = parser.parse_args()
 def top_down_pattern(zome):
     total_time_sec = 5 # TODO: can be a variable
     total_frames = total_time_sec * zome.fps
-    topZ = zome.height()
+    topZ = zome.height
 
     length_factor = 0.3 # TODO: can be a variable 
     alpha = 255 #TODO: can be a variable 
