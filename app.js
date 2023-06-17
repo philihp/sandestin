@@ -216,7 +216,9 @@ async function main() {
     }
   }
 
-  let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree(), 'patterns', 'address-test.js')]);
+  // let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree(), 'patterns', 'address-test.js')]);
+  let instrument = new Instrument(model, framesPerSecond, 'python', [path.join(pathToRootOfTree(), 'patterns', 'top_down.py')]);
+
   let lastFrameIndex = null;
   let startTime = Date.now();
 
