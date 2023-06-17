@@ -21,7 +21,7 @@ async function main() {
     const timeBias = (frameIndex / config.framesPerSecond) * hz;
     
     for (const pixel of model.pixels) {
-      let color = rgb(((timeBias + pixel.x / rainbowWidth + pixel.y * stride) % 1) * 360,
+      let color = rgb(((timeBias + pixel.x / rainbowWidth + pixel.y * stride) % 1),
         100 /* saturation */, 100 /* brightness */);
 
       for (let i = 0; i < 2; i ++)
