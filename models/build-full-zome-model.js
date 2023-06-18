@@ -12,10 +12,13 @@ import * as path from 'path';
     your right hand side.) The zome is rotationally symmetric so it
     doesn't matter which one is 0.
 (2) Each receiver board has four ports:
-    Port 0: Clockwise outer, 360 pixels
-    Port 1: Clockwise inner, 360 pixels
-    Port 2: Counterclockwise outer, 315 pixels
-    Port 3: Counterclockwise inner, 315 pixels
+    Port 1: Counterclockwise outer, 315 pixels
+    Port 2: Counterclockwise inner, 315 pixels
+    Port 3: Clockwise outer, 360 pixels
+    Port 4: Clockwise inner, 360 pixels
+    (XXX we might want to change this so that clockwise comes
+         first, matching the vertex order, but this is how it
+         is currently)
 (3) LEDs are mapped to consecutive addresses: to receivers 0-9 in
     ascending (clockwise) order, then within a receiver to ports 0-3
     in ascending order, then on an individual strand, from the bottom
@@ -148,10 +151,10 @@ async function buildZomeFromObjFile(pathToObjFile) {
 
   let receiver = 0;
   for (let base of baseVerts) {
-    console.log(`** Receiver ${receiver}, clockwise:`);
+    console.log(`** Receiver ${receiver}, counterclockwise:`);
     traceStrand(base, { counterclockwise: true }, 0); // outer
     traceStrand(base, { counterclockwise: true }, 1); // inner
-    console.log(`** Receiver ${receiver}, counterclockwise:`);
+    console.log(`** Receiver ${receiver}, clockwise:`);
     traceStrand(base, { clockwise: true, center: true }, 0); // outer
     traceStrand(base, { clockwise: true, center: true }, 1); // inner
     receiver ++;
