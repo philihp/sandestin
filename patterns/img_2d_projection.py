@@ -34,7 +34,7 @@ def pattern(zome):
             
             for _ in range(total_frames):
                 zoom_factor = min([1, 0.2 + np.sqrt((frame_id % total_frames) / total_frames)]) # how much the img zoom in 
-                rotate_angle = np.sin(frame_id / zome.fps) # how much the img rotate
+                rotate_angle = np.sin(frame_id / zome.fps) * 0.1 # how much the img rotate
                 rotation_matrix = np.array([[np.cos(rotate_angle), -np.sin(rotate_angle)],
                                 [np.sin(rotate_angle), np.cos(rotate_angle)]])
                 rgba_values = np.zeros((zome.num_pixels, 4)).astype(int) #initialize with all zeros 
@@ -46,16 +46,17 @@ def pattern(zome):
                 zoomed_img = img[zoomed_y:zoomed_y + zoomed_height, zoomed_x:zoomed_x + zoomed_width]
                 zoomed_img_dim = zoomed_img.shape 
 
-                # import pdb;pdb.set_trace()
                 ind_X = (X + max_x)/(2*max_x) * zoomed_img_dim[0]
                 ind_Y = (Y + max_y)/(2*max_y) * zoomed_img_dim[1]
                 rotate_indices = np.dot(rotation_matrix, np.stack([ind_X, ind_Y])).T
                 rotate_indices = rotate_indices.astype(int)
                 rotate_indices[rotate_indices < 0] = 0
-                rotate_indices[rotate_indices[:,0] >= zoomed_img_dim[0]] = zoomed_img_dim[0]-1
-                rotate_indices[rotate_indices[:,1] >= zoomed_img_dim[1]] = zoomed_img_dim[1]-1 
-
+                boarder_x = rotate_indices[:,0] >= zoomed_img_dim[0]
+                rotate_indices[boarder_x,0] = zoomed_img_dim[0]-1
+                boarder_y = rotate_indices[:,1] >= zoomed_img_dim[1]
+                rotate_indices[boarder_y,1] = zoomed_img_dim[1]-1 
                 color = zoomed_img[rotate_indices[:,0], rotate_indices[:,1]]
+                
                 alpha_values = np.ones((zome.num_pixels,1)).astype(int) * alpha
                 rgba_values = np.concatenate((color, alpha_values), axis=1)
                 # for i, p in enumerate(zome.pixels):
