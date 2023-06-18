@@ -23,7 +23,16 @@ class Zome:
     def width_y(self):
         all_y = [self.nodes[i]['point'][1] for i in range(len(self.nodes))]
         return np.max(all_y) 
-
+    
+    def get_polar_coordinates(self):
+        Z = np.array(self.pixels)[:,1]
+        X = np.array(self.pixels)[:,0]
+        Y = np.array(self.pixels)[:,1]
+        R = np.sqrt(X**2 + Y**2)
+        THETA = np.arctan2(Y, X)
+        polar_coordinates = np.stack([R, THETA, Z], -1)
+        return polar_coordinates
+        
 
 def transform_to_byte_str(frame_id: int, rgba_values: list) -> str:
     """Transform the rgba values for all leds in a frame to bytes str for printing. 
