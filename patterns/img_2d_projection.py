@@ -33,7 +33,7 @@ def pattern(zome):
             img_center = np.array(img.shape)/2.0
             
             for _ in range(total_frames):
-                zoom_factor = min([1, 0.5+np.sqrt((frame_id % total_frames) / total_frames)]) # how much the img zoom in 
+                zoom_factor = min([1, 0.2 + np.sqrt((frame_id % total_frames) / total_frames)]) # how much the img zoom in 
                 rotate_angle = np.sin(frame_id / zome.fps) # how much the img rotate
                 rotation_matrix = np.array([[np.cos(rotate_angle), -np.sin(rotate_angle)],
                                 [np.sin(rotate_angle), np.cos(rotate_angle)]])
