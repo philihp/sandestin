@@ -10,5 +10,5 @@ port = 3000
 # lookup for each and every e131 packet sent. This is a workaround
 # XXX fix it correctly
 type = "e131"
-host = "10.2.0.3" # actually this is its new IP
-channels = "bgr"
+host = "10.2.0.5" # actually this is its new IP
+channels = "rgb"
