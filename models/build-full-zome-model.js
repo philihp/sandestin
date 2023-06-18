@@ -149,11 +149,11 @@ async function buildZomeFromObjFile(pathToObjFile) {
   let receiver = 0;
   for (let base of baseVerts) {
     console.log(`** Receiver ${receiver}, clockwise:`);
-    traceStrand(base, { clockwise: true, center: true }, 0); // outer
-    traceStrand(base, { clockwise: true, center: true }, 1); // inner
-    console.log(`** Receiver ${receiver}, counterclockwise:`);
     traceStrand(base, { counterclockwise: true }, 0); // outer
     traceStrand(base, { counterclockwise: true }, 1); // inner
+    console.log(`** Receiver ${receiver}, counterclockwise:`);
+    traceStrand(base, { clockwise: true, center: true }, 0); // outer
+    traceStrand(base, { clockwise: true, center: true }, 1); // inner
     receiver ++;
   }
 
