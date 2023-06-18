@@ -5,10 +5,10 @@ framesPerSecond = 40
 port = 3000
 
 [[outputs]]
-# 10.2.0.8 is geoff-f48-2.int.monument.house
-# We hardcode the IP because if we don't, a bug somewhere causes a DNS
-# lookup for each and every e131 packet sent. This is a workaround
-# XXX fix it correctly
 type = "e131"
-host = "10.2.0.5" # actually this is its new IP
+# Have to use IP addresses here, not hostnames, because if we don't,
+# a bug somewhere causes a DNS lookup for each and every e131 packet sent.
+# This works as a workaround
+# XXX fix it correctly
+host = "10.2.0.5"
 channels = "rgb"

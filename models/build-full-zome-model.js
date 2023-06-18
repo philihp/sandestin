@@ -29,9 +29,18 @@ Geometry:
 (1) The Z axis points up (the elevation, from the ground to the sky.)
 (2) Units are in meters.
 
+Channel order:
+
+For the LED strips we bought for the Dragon Egg, channel order should be
+set to BGR in the Falcon controller (this seems to be the channel order
+in the physical strips) and "rgb" in our own config file (which seems
+to be what the Falcon controller expects.)
+
 */
 
-// XXX check that I got clockwise/counterclockwise directions right
+// XXX check that clockwise/counterclockwise directions match the simulator
+// (they match the physical zome - but make sure it works in simulator
+// coordinate system too)
 
 const EPSILON = .1; // 1 centimeter
 const PI = Math.PI;
