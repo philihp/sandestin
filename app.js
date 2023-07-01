@@ -152,6 +152,11 @@ class Instrument {
     else
       return item.value;
   }
+
+  close() {
+    this.child.kill('SIGKILL');
+    this.child.unref();
+  }
 }
 
 
@@ -193,10 +198,30 @@ class Simulator {
 /*****************************************************************************/
 
 async function main() {
-  // XXX take config file as command line argument
+  function usage () {
+    console.log("Usage: node app.js <pattern name or playlist file>");
+    console.log("If a pattern name, it should be a pattern described in `patterns/patterns.toml`.");
+    console.log("If a playlist file, it should be in the same format as `playlist.toml`.")
+    console.log("");
+  }
+
+  if (process.argv.length !== 3)
+    return usage();
+  const patternNameOrPlaylistPath = process.argv[2];
+
+  // XXX allow changing config file path via command line option
   const configPath = path.join(pathToRootOfTree(), 'config.toml');
   const configDir = path.dirname(configPath);
   const config = toml.parse(await readFile(configPath));
+
+  // XXX allow pattern list path to be overridden in config file
+  const patternListPath = path.join(pathToRootOfTree(), 'patterns', 'patterns.toml');
+  const patternsDir = path.dirname(patternListPath);
+  const rawPatternList = toml.parse(await readFile(patternListPath));
+  const patterns = {};
+  for (let pattern of rawPatternList.patterns) {
+    patterns[pattern.name] = pattern;
+  }
 
   const model = Model.import(JSON.parse(await readFile(path.join(configDir, config.model))));
   const simulator = config.simulator ? new Simulator(config.simulator, model) : null;
@@ -217,52 +242,79 @@ async function main() {
     }
   }
 
-  // let instrument = new Instrument(model, framesPerSecond, 'node', [path.join(pathToRootOfTree(), 'patterns', 'rainbow-spot.js')]);
-  let instrument = new Instrument(model, framesPerSecond, 'python3', [path.join(pathToRootOfTree(), 'patterns', 'img_2d_projection.py')]);
-  // let instrument = new Instrument(model, framesPerSecond, 'python3', [path.join(pathToRootOfTree(), 'patterns', 'top_down_white.py')]);
-  // let instrument = new Instrument(model, framesPerSecond, 'python3', [path.join(pathToRootOfTree(), 'patterns', 'snake.py')]);
+  let playlist;
+  if (patternNameOrPlaylistPath in patterns) {
+    playlist = {
+      items: [{
+        pattern: patternNameOrPlaylistPath,
+        seconds: 60*60*24*365
+      }]
+    };
+  } else {
+    playlist = toml.parse(await readFile(patternNameOrPlaylistPath));    
+  }
+  console.log(playlist);
 
-  let lastFrameIndex = null;
-  let startTime = Date.now();
-
-  const pixelColorsMixed = [];
- 
+  let playlistPointer = 0;
   while (true) {
-    // We should redo this at some point so that displayTime is actually the time the frame's
-    // going to be displayed (for music sync purposes). Currently it's actually the time the
-    // frame is rendered.
-    // XXX disregard above and rewrite this for new tool model
-    let msSinceStart = (Date.now() - startTime);
-    let frameIndex = Math.floor(msSinceStart / msPerFrame) + 1;
-    let displayTimeMs = startTime + frameIndex * msPerFrame;
-    await sleep(displayTimeMs - Date.now());
+    if (playlistPointer >= playlist.items.length)
+      playlistPointer = 0;
+    const playlistItem = playlist.items[playlistPointer];
 
-    // Clear out the mixer framebuffer to black
-    for (let i = 0; i < model.pixelCount(); i ++)
-      pixelColorsMixed[i] = [0, 0, 0];
+    const pattern = patterns[playlistItem.pattern];
+    if (! pattern)
+      throw new Error(`no such pattern ${patternName}`);
 
-    let frameData = await instrument.getFrame();
-    if (! frameData) {
-      console.log(`pattern exited`);
-      break;
+    let instrument = new Instrument(model, framesPerSecond, pattern.program,
+      [ path.join(patternsDir, pattern.script) ]);
+
+    let lastFrameIndex = null;
+    let startTime = Date.now();
+    let framesToGo = Math.floor(playlistItem.seconds * framesPerSecond);
+
+    const pixelColorsMixed = [];
+  
+    while (framesToGo > 0) {
+      // We should redo this at some point so that displayTime is actually the time the frame's
+      // going to be displayed (for music sync purposes). Currently it's actually the time the
+      // frame is rendered.
+      // XXX disregard above and rewrite this for new tool model
+      let msSinceStart = (Date.now() - startTime);
+      let frameIndex = Math.floor(msSinceStart / msPerFrame) + 1;
+      let displayTimeMs = startTime + frameIndex * msPerFrame;
+      await sleep(displayTimeMs - Date.now());
+
+      // Clear out the mixer framebuffer to black
+      for (let i = 0; i < model.pixelCount(); i ++)
+        pixelColorsMixed[i] = [0, 0, 0];
+
+      let frameData = await instrument.getFrame();
+      if (! frameData) {
+        console.log(`pattern exited`);
+        break;
+      }
+  //    console.log(frameData);
+
+      // XXX check frame number, loop until we catch up, bail out if we fall too far behind
+      for (let i = 0; i < model.pixelCount(); i ++) {
+        let r = frameData.readUint8(4 + i * 4 + 0);
+        let g = frameData.readUint8(4 + i * 4 + 1);
+        let b = frameData.readUint8(4 + i * 4 + 2);
+        let a = frameData.readUint8(4 + i * 4 + 3);
+        pixelColorsMixed[i] = [r, g, b]; // TODO: mix layers :)
+      }
+
+      await sendFrame(pixelColorsMixed, outputs);
+
+      if (lastFrameIndex !== null && lastFrameIndex !== frameIndex - 1) {
+        console.log(`warning: skipped frames from ${lastFrameIndex} to ${frameIndex}`);
+      }
+      lastFrameIndex = frameIndex;
+      framesToGo --;
     }
-//    console.log(frameData);
 
-    // XXX check frame number, loop until we catch up, bail out if we fall too far behind
-    for (let i = 0; i < model.pixelCount(); i ++) {
-      let r = frameData.readUint8(4 + i * 4 + 0);
-      let g = frameData.readUint8(4 + i * 4 + 1);
-      let b = frameData.readUint8(4 + i * 4 + 2);
-      let a = frameData.readUint8(4 + i * 4 + 3);
-      pixelColorsMixed[i] = [r, g, b]; // TODO: mix layers :)
-    }
-
-    await sendFrame(pixelColorsMixed, outputs);
-
-    if (lastFrameIndex !== null && lastFrameIndex !== frameIndex - 1) {
-      console.log(`warning: skipped frames from ${lastFrameIndex} to ${frameIndex}`);
-    }
-    lastFrameIndex = frameIndex;
+    instrument.close();
+    playlistPointer ++;
   }
 }
 

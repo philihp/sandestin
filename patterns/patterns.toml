@@ -1,0 +1,64 @@
+[[patterns]]
+name = "address-test"
+script = "address-test.js"
+program = "node"
+
+[[patterns]]
+name = "address-test-2"
+script = "address-test-2.js"
+program = "node"
+
+[[patterns]]
+name = "gpt3"
+script = "gpt3.js"
+program = "node"
+
+[[patterns]]
+name = "img_2d_projection"
+script = "img_2d_projection.py"
+program = "python3"
+
+[[patterns]]
+name = "rainbow-spot"
+script = "rainbow-spot.js"
+program = "node"
+
+[[patterns]]
+name = "rainbow"
+script = "rainbow.js"
+program = "node"
+
+[[patterns]]
+name = "red-spot"
+script = "red-spot.js"
+program = "node"
+
+[[patterns]]
+name = "scandown"
+script = "scandown.js"
+program = "node"
+
+[[patterns]]
+name = "snake"
+script = "snake.py"
+program = "python3"
+
+[[patterns]]
+name = "spin"
+script = "spin.js"
+program = "node"
+
+[[patterns]]
+name = "top_down_rainbow"
+script = "top_down_rainbow.py"
+program = "python3"
+
+[[patterns]]
+name = "top_down_white"
+script = "top_down_white.py"
+program = "python3"
+
+[[patterns]]
+name = "tunnel"
+script = "tunnel.js"
+program = "node"

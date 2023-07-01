@@ -1,0 +1,7 @@
+[[items]]
+pattern = "rainbow-spot"
+seconds = 3
+
+[[items]]
+pattern = "scandown"
+seconds = 3
