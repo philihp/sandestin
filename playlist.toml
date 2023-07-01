@@ -1,7 +1,22 @@
 [[items]]
-pattern = "rainbow-spot"
-seconds = 3
+pattern = "scandown"
+seconds = 1.5
 
 [[items]]
 pattern = "scandown"
+seconds = 1.5
+options = { bandWidth = 0.8, secondsPerCycle = 1.5 }
+
+[[items]]
+pattern = "scandown"
+seconds = 1.5
+options = { bandWidth = 0.2 }
+
+[[items]]
+pattern = "scandown"
+seconds = 1.5
+options = { bandWidth = 0.4 }
+
+[[items]]
+pattern = "rainbow-spot"
 seconds = 3

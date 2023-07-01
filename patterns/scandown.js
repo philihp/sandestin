@@ -20,8 +20,8 @@ async function main() {
   model._ensureUpToDate(); // XXX hack
   const top = model.max[scanDimension];
   const bottom = model.min[scanDimension];
-  const secondsPerCycle = 2.0;
-  const bandWidth = .1;
+  const secondsPerCycle = config.options.secondsPerCycle || 2.0;
+  const bandWidth = config.options.bandWidth || .1;
 
   for (let frameIndex = 0; ; frameIndex ++) {
     const displayTime = frameIndex / config.framesPerSecond;

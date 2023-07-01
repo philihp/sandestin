@@ -101,13 +101,15 @@ class Instrument {
   // framesPerSecond: the fps to tell the instrument to render at
   // program: eg 'node', 'python'.. should be in $PATH
   // args: string array of arguments
-  constructor(model, framesPerSecond, program, args) {
+  // options: JSON object to pass to the program via its config file
+  constructor(model, framesPerSecond, program, args, options) {
     const totalPixels = model.pixelCount();
     const frameSize = 4 + 4 * totalPixels;
 
     const toolConfiguration = {
       framesPerSecond: framesPerSecond,
       model: model.export(),
+      options: options
     };
   
     const tmpobj = tmp.fileSync();
@@ -265,8 +267,13 @@ async function main() {
     if (! pattern)
       throw new Error(`no such pattern ${patternName}`);
 
+    const options = {
+      ...(pattern.options || {}),
+      ...(playlistItem.options || {}),
+    };
+
     let instrument = new Instrument(model, framesPerSecond, pattern.program,
-      [ path.join(patternsDir, pattern.script) ]);
+      [ path.join(patternsDir, pattern.script) ], options);
 
     let lastFrameIndex = null;
     let startTime = Date.now();
