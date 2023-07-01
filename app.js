@@ -93,12 +93,12 @@ class LinearRandomWalkPattern{
 */
 
 /*****************************************************************************/
-/* Instruments (external pattern generator programs)                         */
+/* Generators (external pattern generator programs)                          */
 /*****************************************************************************/
 
-class Instrument {
-  // model: a Model to pass to the instrument
-  // framesPerSecond: the fps to tell the instrument to render at
+class Generator {
+  // model: a Model to pass to the generator
+  // framesPerSecond: the fps to tell the generator to render at
   // program: eg 'node', 'python'.. should be in $PATH
   // args: string array of arguments
   // options: JSON object to pass to the program via its config file
@@ -272,7 +272,7 @@ async function main() {
       ...(playlistItem.options || {}),
     };
 
-    let instrument = new Instrument(model, framesPerSecond, pattern.program,
+    let generator = new Generator(model, framesPerSecond, pattern.program,
       [ path.join(patternsDir, pattern.script) ], options);
 
     let lastFrameIndex = null;
@@ -295,7 +295,7 @@ async function main() {
       for (let i = 0; i < model.pixelCount(); i ++)
         pixelColorsMixed[i] = [0, 0, 0];
 
-      let frameData = await instrument.getFrame();
+      let frameData = await generator.getFrame();
       if (! frameData) {
         console.log(`pattern exited`);
         break;
@@ -320,7 +320,7 @@ async function main() {
       framesToGo --;
     }
 
-    instrument.close();
+    generator.close();
     playlistPointer ++;
   }
 }
