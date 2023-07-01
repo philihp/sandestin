@@ -11,7 +11,7 @@ async function main() {
   const model = Model.import(config.model);
   const pixelColors = [];
 
-  console.error("Rainbow pattern!");
+  console.error("Matrix rain!");
 
   const hz = .5;
   const stride = -.01;
