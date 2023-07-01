@@ -255,14 +255,10 @@ async function main() {
   } else {
     playlist = toml.parse(await readFile(patternNameOrPlaylistPath));    
   }
-  console.log(playlist);
+  if (playlist.items.length < 1)
+    throw new Error("Playlist must have at least one item");
 
-  let playlistPointer = 0;
-  while (true) {
-    if (playlistPointer >= playlist.items.length)
-      playlistPointer = 0;
-    const playlistItem = playlist.items[playlistPointer];
-
+  function generatorForPlaylistItem(playlistItem) {
     const pattern = patterns[playlistItem.pattern];
     if (! pattern)
       throw new Error(`no such pattern ${patternName}`);
@@ -272,15 +268,33 @@ async function main() {
       ...(playlistItem.options || {}),
     };
 
-    let generator = new Generator(model, framesPerSecond, pattern.program,
+    return new Generator(model, framesPerSecond, pattern.program,
       [ path.join(patternsDir, pattern.script) ], options);
+  }
+
+  let playlistOffset = 0;
+  let generator = null;
+  let nextGenerator = generatorForPlaylistItem(playlist.items[playlistOffset]);
+  const pixelColorsMixed = [];
+
+  while (true) {
+    const playlistItem = playlist.items[playlistOffset];
+    const nextPlaylistOffset = (playlistOffset + 1) % playlist.items.length;
+    const nextPlaylistItem = playlist.items[nextPlaylistOffset];
+    
+    if (generator)
+      generator.close();
+    generator = nextGenerator;
+    nextGenerator = generatorForPlaylistItem(nextPlaylistItem);
 
     let lastFrameIndex = null;
     let startTime = Date.now();
     let framesToGo = Math.floor(playlistItem.seconds * framesPerSecond);
 
-    const pixelColorsMixed = [];
-  
+    const transitionDurationMs = 1000;
+    const transitionEndTimeMs = Date.now() + playlistItem.seconds * 1000;
+    const transitionStartTimeMs = transitionEndTimeMs - transitionDurationMs;
+
     while (framesToGo > 0) {
       // We should redo this at some point so that displayTime is actually the time the frame's
       // going to be displayed (for music sync purposes). Currently it's actually the time the
@@ -295,24 +309,44 @@ async function main() {
       for (let i = 0; i < model.pixelCount(); i ++)
         pixelColorsMixed[i] = [0, 0, 0];
 
-      let frameData = await generator.getFrame();
-      if (! frameData) {
-        console.log(`pattern exited`);
-        break;
+      const nextGeneratorWeight =
+        Math.max(0, Math.min(1, (Date.now() - transitionStartTimeMs) / transitionDurationMs));
+
+      const framesToMix = [];
+      const mainFrameData = await generator.getFrame();
+      if (! mainFrameData)
+        console.log("warning: pattern exited");
+      else
+        framesToMix.push({ frameData: mainFrameData, weight: 1 - nextGeneratorWeight });
+
+      if (Date.now() > transitionStartTimeMs) {
+        const nextFrameData = await nextGenerator.getFrame();
+        if (! nextFrameData)
+          console.log("warning: (next) pattern exited");
+        else
+          framesToMix.push({ frameData: nextFrameData, weight: nextGeneratorWeight });
       }
-  //    console.log(frameData);
+
+//    console.log(frameData);
 
       // XXX check frame number, loop until we catch up, bail out if we fall too far behind
-      for (let i = 0; i < model.pixelCount(); i ++) {
-        let r = frameData.readUint8(4 + i * 4 + 0);
-        let g = frameData.readUint8(4 + i * 4 + 1);
-        let b = frameData.readUint8(4 + i * 4 + 2);
-        let a = frameData.readUint8(4 + i * 4 + 3);
-        pixelColorsMixed[i] = [r, g, b]; // TODO: mix layers :)
+      for (let frameToMix of framesToMix) {
+        for (let i = 0; i < model.pixelCount(); i ++) {
+          let r = frameToMix.frameData.readUint8(4 + i * 4 + 0);
+          let g = frameToMix.frameData.readUint8(4 + i * 4 + 1);
+          let b = frameToMix.frameData.readUint8(4 + i * 4 + 2);
+          let a = frameToMix.frameData.readUint8(4 + i * 4 + 3);
+          // TODO: mix based on alpha :)
+          pixelColorsMixed[i][0] += r * frameToMix.weight;
+          pixelColorsMixed[i][1] += g * frameToMix.weight;
+          pixelColorsMixed[i][2] += b * frameToMix.weight;
+        }
       }
 
       await sendFrame(pixelColorsMixed, outputs);
 
+      // XXX this needs to be redone or at least re-examined - is it even meaningful
+      // with multiple generators running..
       if (lastFrameIndex !== null && lastFrameIndex !== frameIndex - 1) {
         console.log(`warning: skipped frames from ${lastFrameIndex} to ${frameIndex}`);
       }
@@ -320,9 +354,13 @@ async function main() {
       framesToGo --;
     }
 
-    generator.close();
-    playlistPointer ++;
+    playlistOffset = nextPlaylistOffset;
   }
+
+  if (generator)
+    generator.close();
+  if (nextGenerator)
+    nextGenerator.close();
 }
 
 await main();

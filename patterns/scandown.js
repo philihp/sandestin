@@ -27,7 +27,7 @@ async function main() {
     const displayTime = frameIndex / config.framesPerSecond;
 
     const zCenter = bottom + (top - bottom) * (displayTime % secondsPerCycle) / secondsPerCycle;
-    console.error(`${zCenter}`);
+//    console.error(`${zCenter}`);
 
     for (const pixel of model.pixels) {
       const isInBand = Math.abs(pixel.point[scanDimension] - zCenter) < bandWidth / 2;
