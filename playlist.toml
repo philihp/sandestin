@@ -1,8 +1,47 @@
+
 [[items]]
 pattern = "scandown"
+seconds = 10
+options = { secondsPerCycle = 5, bandWidth = 1}
+
+[[items]]
+pattern = "scandown"
+seconds = 10
+options = { secondsPerCycle = 2, bandWidth = 0.5}
+
+[[items]]
+pattern = "scandown"
+seconds = 10
+options = { secondsPerCycle = 1, bandWidth = 0.25}
+
+[[items]]
+pattern = "scandown"
+seconds = 10
+options = { secondsPerCycle = 0.5, bandWidth = 0.1}
+
+[[items]]
+pattern = "address-test-2"
 seconds = 5
-options = { secondsPerCycle = 1, bandWidth = 0.5}
+
+
+[[items]]
+pattern = "tunnel"
+seconds = 60
+
+[[items]]
+pattern = "gpt3"
+seconds = 60
+
+[[items]]
+pattern = "img_2d_projection"
+seconds = 90
 
 [[items]]
 pattern = "rainbow-spot"
-seconds = 5
+seconds = 40
+
+[[items]]
+pattern = "matrix-rain"
+seconds = 30
+
+

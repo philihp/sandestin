@@ -10,5 +10,5 @@ type = "e131"
 # a bug somewhere causes a DNS lookup for each and every e131 packet sent.
 # This works as a workaround
 # XXX fix it correctly
-host = "10.2.0.5"
+host = "192.168.100.50"
 channels = "rgb"

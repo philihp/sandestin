@@ -13,7 +13,7 @@ args = parser.parse_args()
 
 
 def pattern(zome):
-    total_time_sec = 10 # TODO: can be a variable
+    total_time_sec = 5 # TODO: can be a variable
     total_frames = total_time_sec * zome.fps
     # topZ = zome.height()
     max_x = zome.width_x()

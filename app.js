@@ -261,7 +261,7 @@ async function main() {
   function generatorForPlaylistItem(playlistItem) {
     const pattern = patterns[playlistItem.pattern];
     if (! pattern)
-      throw new Error(`no such pattern ${patternName}`);
+      throw new Error(`no such pattern ${playlistItem.pattern}`);
 
     const options = {
       ...(pattern.options || {}),
@@ -291,7 +291,7 @@ async function main() {
     let startTime = Date.now();
     let framesToGo = Math.floor(playlistItem.seconds * framesPerSecond);
 
-    const transitionDurationMs = 1000;
+    const transitionDurationMs = 5000;
     const transitionEndTimeMs = Date.now() + playlistItem.seconds * 1000;
     const transitionStartTimeMs = transitionEndTimeMs - transitionDurationMs;
 
