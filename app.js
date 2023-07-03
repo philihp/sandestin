@@ -289,13 +289,16 @@ async function main() {
 
     let lastFrameIndex = null;
     let startTime = Date.now();
-    let framesToGo = Math.floor(playlistItem.seconds * framesPerSecond);
 
     const transitionDurationMs = 5000;
     const transitionEndTimeMs = Date.now() + playlistItem.seconds * 1000;
     const transitionStartTimeMs = transitionEndTimeMs - transitionDurationMs;
 
-    while (framesToGo > 0) {
+    // Currently this is based on wallclock time so that if a pattern drops (doesn't deliver)
+    // frames on time, it doesn't extend the amount of time that it runs. But, it would be
+    // better in the future to use an exact number of frames, and go ahead with rendering the
+    // frame if the pattern doesn't deliver it by the deadline.
+    while (Date.now() < transitionEndTimeMs) {
       // We should redo this at some point so that displayTime is actually the time the frame's
       // going to be displayed (for music sync purposes). Currently it's actually the time the
       // frame is rendered.
@@ -349,7 +352,6 @@ async function main() {
         console.log(`warning: skipped frames from ${lastFrameIndex} to ${frameIndex}`);
       }
       lastFrameIndex = frameIndex;
-      framesToGo --;
     }
 
     playlistOffset = nextPlaylistOffset;
