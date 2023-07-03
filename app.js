@@ -327,8 +327,6 @@ async function main() {
           framesToMix.push({ frameData: nextFrameData, weight: nextGeneratorWeight });
       }
 
-//    console.log(frameData);
-
       // XXX check frame number, loop until we catch up, bail out if we fall too far behind
       for (let frameToMix of framesToMix) {
         for (let i = 0; i < model.pixelCount(); i ++) {
