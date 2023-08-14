@@ -1,4 +1,3 @@
-
 [[items]]
 pattern = "scandown"
 seconds = 10
@@ -23,10 +22,20 @@ options = { secondsPerCycle = 0.5, bandWidth = 0.1}
 pattern = "address-test-2"
 seconds = 5
 
+[[items]]
+pattern = "helix"
+seconds = 5
+options = { mode = 1, whiteOnly = true, saturationSpeed = 0, decay = 0.95 }
+
 
 [[items]]
 pattern = "tunnel"
 seconds = 60
+
+[[items]]
+pattern = "helix"
+seconds = 60
+options = { mode = 0, whiteOnly = false, saturationSpeed = 1, decay = 0.90 }
 
 [[items]]
 pattern = "gpt3"
@@ -34,7 +43,12 @@ seconds = 60
 
 [[items]]
 pattern = "img_2d_projection"
-seconds = 90
+seconds = 250
+
+[[items]]
+pattern = "helix"
+seconds = 60
+options = { mode = 1, whiteOnly = false, saturationSpeed = 0, decay = 0.98 }
 
 [[items]]
 pattern = "rainbow-spot"
@@ -43,5 +57,12 @@ seconds = 40
 [[items]]
 pattern = "matrix-rain"
 seconds = 30
+
+
+
+
+
+
+
 
 
