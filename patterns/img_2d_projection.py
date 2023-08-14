@@ -4,7 +4,6 @@ import sys
 from python_utils import Zome, transform_to_byte_str
 from PIL import Image
 import os.path 
-
 parser = argparse.ArgumentParser()
 
 parser.add_argument("model_file", type=str, help="the zome's model file", default='zome_model.json')
@@ -13,12 +12,11 @@ args = parser.parse_args()
 
 
 def pattern(zome):
-    total_time_sec = 5 # TODO: can be a variable
+    total_time_sec = 10 # TODO: can be a variable
     total_frames = total_time_sec * zome.fps
     # topZ = zome.height()
     max_x = zome.width_x()
     max_y = zome.width_y()
-    alpha = 255 #TODO: can be a variable 
     frame_id = 0
     img_dir = os.path.dirname(__file__) + '/../media/'
     X = np.array(zome.pixels)[:,0]
@@ -27,14 +25,31 @@ def pattern(zome):
         for f in os.listdir(img_dir):
             if not (f.endswith('jpeg') or f.endswith('png') or f.endswith('jpg')):
                 continue
+            # sys.stderr.write(f"filename: {f}\n")
             img_path = os.path.join(img_dir, f)
             img = np.asarray(Image.open(img_path))
             img_dim = img.shape
+            alpha = 255
             img_center = np.array(img.shape)/2.0
+            fading_in_frames = 30 
+            fading_out_frames = 30  
+            fading_factor = 1
             
-            for _ in range(total_frames):
-                zoom_factor = min([1, 0.5+np.sqrt((frame_id % total_frames) / total_frames)]) # how much the img zoom in 
-                rotate_angle = np.sin(frame_id / zome.fps) # how much the img rotate
+            initial_zoom_offset = np.random.rand()
+            initial_rotate_angle_offset = np.random.rand()
+            for frame in range(total_frames):
+                if frame < fading_in_frames:
+                    fading_factor = frame/fading_in_frames
+                elif frame > total_frames-fading_out_frames:
+                    fading_factor = (total_frames-frame)/fading_out_frames
+                else:
+                    fading_factor = 1
+                
+                zoom_factor = min([1, 0.7 + initial_zoom_offset * (((frame_id ) % total_frames) / total_frames)]) # how much the img zoom in 
+                # sys.stderr.write(f"zoom_factor: {zoom_factor}\n")
+                rotate_angle = np.sin(frame_id / zome.fps + initial_rotate_angle_offset) # how much the img rotate
+                # sys.stderr.write(f"rotate_angle: {rotate_angle}\n")
+
                 rotation_matrix = np.array([[np.cos(rotate_angle), -np.sin(rotate_angle)],
                                 [np.sin(rotate_angle), np.cos(rotate_angle)]])
                 rgba_values = np.zeros((zome.num_pixels, 4)).astype(int) #initialize with all zeros 
@@ -55,7 +70,8 @@ def pattern(zome):
                 rotate_indices[rotate_indices[:,0] >= zoomed_img_dim[0]] = zoomed_img_dim[0]-1
                 rotate_indices[rotate_indices[:,1] >= zoomed_img_dim[1]] = zoomed_img_dim[1]-1 
 
-                color = zoomed_img[rotate_indices[:,0], rotate_indices[:,1]]
+                color = zoomed_img[rotate_indices[:,0], rotate_indices[:,1]] * fading_factor
+                color = color.astype(int)
                 alpha_values = np.ones((zome.num_pixels,1)).astype(int) * alpha
                 rgba_values = np.concatenate((color, alpha_values), axis=1)
                 # for i, p in enumerate(zome.pixels):
