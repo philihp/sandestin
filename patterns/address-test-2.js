@@ -13,7 +13,7 @@ async function main() {
   console.error("Address test pattern (Mark 2)!");
 
   const framesPerStrand = 5;
-  const pixelsPerStrand = [315, 315, 360, 360]; // repeats
+  const pixelsPerStrand = [315, 360, 315, 360]; // repeats
   const numStrands = 40;
   let frameIndex = 0;
 
