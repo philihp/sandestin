@@ -14,6 +14,12 @@ script = "gpt3.js"
 program = "node"
 
 [[patterns]]
+name = "helix"
+script = "helix.js"
+program = "node"
+options = { mode = 0} # default
+
+[[patterns]]
 name = "img_2d_projection"
 script = "img_2d_projection.py"
 program = "python3"
@@ -47,11 +53,6 @@ program = "node"
 name = "snake"
 script = "snake.py"
 program = "python3"
-
-[[patterns]]
-name = "spin"
-script = "spin.js"
-program = "node"
 
 [[patterns]]
 name = "top_down_rainbow"
