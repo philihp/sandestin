@@ -277,6 +277,8 @@ async function main() {
   let nextGenerator = generatorForPlaylistItem(playlist.items[playlistOffset]);
   const pixelColorsMixed = [];
 
+  const powerScale = 1.0;
+
   while (true) {
     const playlistItem = playlist.items[playlistOffset];
     const nextPlaylistOffset = (playlistOffset + 1) % playlist.items.length;
@@ -338,9 +340,9 @@ async function main() {
           let b = frameToMix.frameData.readUint8(4 + i * 4 + 2);
           let a = frameToMix.frameData.readUint8(4 + i * 4 + 3);
           // TODO: mix based on alpha :)
-          pixelColorsMixed[i][0] += r * frameToMix.weight;
-          pixelColorsMixed[i][1] += g * frameToMix.weight;
-          pixelColorsMixed[i][2] += b * frameToMix.weight;
+          pixelColorsMixed[i][0] += r * frameToMix.weight * powerScale;
+          pixelColorsMixed[i][1] += g * frameToMix.weight * powerScale;
+          pixelColorsMixed[i][2] += b * frameToMix.weight * powerScale;
         }
       }
 
