@@ -3,7 +3,8 @@ import random
 import numpy as np 
 import sys
 from python_utils import Zome, transform_to_byte_str
-
+import colorsys
+import seaborn as sns
 parser = argparse.ArgumentParser()
 
 parser.add_argument("model_file", type=str, help="the zome's model file", default='zome_model.json')
@@ -11,33 +12,43 @@ parser.add_argument("model_file", type=str, help="the zome's model file", defaul
 args = parser.parse_args()
 
 
-def top_down_pattern(zome):
-    n_snakes = 30
+def snake_pattern(zome):
+    n_snakes = 20
     update_interval = 1
-
-    alpha = 255 
+    alpha = 100
     frame_id = 0
-
+    buffer_length = 120
+    color_palette = sns.color_palette('cubehelix')
     def make_snake():
-        cur_edge = zome.edges[0]
-        cur_pos = 0
-        buffer = [0] * 20
+        cur_edge_id = random.choice(np.arange(len(zome.edges)))
+        cur_edge = zome.edges[cur_edge_id]
+        cur_pos = random.randint(0, len(cur_edge["pixels"]))
+        buffer = [0] * buffer_length
         forward = True
+        color_template = random.choice(color_palette)
         def snake():
-            nonlocal cur_edge, cur_pos, buffer, forward
+            nonlocal cur_edge_id, cur_pos, buffer, forward,color_template
             if frame_id % update_interval == 0:
                 cur_pos += 1
-                if cur_pos == len(cur_edge['pixels']):
+                cur_edge = zome.edges[cur_edge_id]
+                if cur_pos >= len(cur_edge['pixels']):
                     cur_pos = 0
                     next_node_i = cur_edge['endNode' if forward else 'startNode']
                     next_node = zome.nodes[next_node_i]
-                    cur_edge = zome.edges[random.choice(next_node['edges'])]
+                    next_possible_edge_ids = [ i for i in next_node['edges'] if i!= cur_edge_id]
+                    cur_edge_id = random.choice(next_possible_edge_ids)
+                    cur_edge = zome.edges[cur_edge_id]
                     forward = cur_edge['startNode'] == next_node_i
                 next_p = (cur_edge['pixels'] if forward else list(reversed(cur_edge['pixels'])))[cur_pos]
                 buffer = buffer[1:] + [next_p]
-            color = np.array([255, 0 , 0]) # TODO: can be a variable 
-            color = color.astype(int)
-            for p in buffer:
+
+            for i,p in enumerate(buffer):
+                brightness = float(i)/buffer_length
+                # color = np.array(color) * brightness
+                # print(color)
+                r, g, b = colorsys.hsv_to_rgb(color_template[0],color_template[1], brightness)
+                color = np.array([r,g,b]) * 255 
+                color = color.astype(int)
                 rgba_values[p] = list(color) + [alpha] # combine the RGB, and alpha
         return snake
     
@@ -55,6 +66,5 @@ def top_down_pattern(zome):
 if __name__ == "__main__":
     sys.stderr.write(f"loading file {args.model_file}\n")
     zome = Zome(args.model_file)
-    # red_pattern(zome=zome)
-    top_down_pattern(zome=zome)
+    snake_pattern(zome=zome)
 

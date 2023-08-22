@@ -25,6 +25,11 @@ script = "img_2d_projection.py"
 program = "python3"
 
 [[patterns]]
+name = "snake"
+script = "snake.py"
+program = "python3"
+
+[[patterns]]
 name = "matrix-rain"
 script = "matrix-rain.js"
 program = "node"
