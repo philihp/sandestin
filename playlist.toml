@@ -42,8 +42,8 @@ pattern = "gpt3"
 seconds = 60
 
 [[items]]
-pattern = "img_2d_projection"
-seconds = 250
+pattern = "snake"
+seconds = 100
 
 [[items]]
 pattern = "helix"

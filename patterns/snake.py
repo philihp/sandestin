@@ -13,11 +13,14 @@ args = parser.parse_args()
 
 
 def snake_pattern(zome):
-    n_snakes = 20
+    n_snakes = 22
     update_interval = 1
     alpha = 100
     frame_id = 0
-    buffer_length = 120
+    buffer_length = 80
+    update_color_interval = 400
+    num_colors = 20
+    color_map_names = random.choices(plt.colormaps(), k=num_colors)
     # color_palette = sns.color_palette('cubehelix')
     def make_snake():
         cur_edge_id = random.choice(np.arange(len(zome.edges)))
@@ -25,11 +28,10 @@ def snake_pattern(zome):
         cur_pos = random.randint(0, len(cur_edge["pixels"]))
         buffer = [0] * buffer_length
         forward = True
-        color_map_name = random.choice(plt.colormaps())
-        color_map = plt.colormaps.get_cmap("cubehelix")
-
+        color_map = plt.colormaps.get_cmap(color_map_names[0])
+        color_id = 0
         def snake():
-            nonlocal cur_edge_id, cur_pos, buffer, forward, color_map
+            nonlocal cur_edge_id, cur_pos, buffer, forward, color_map, color_map_names, color_id
             if frame_id % update_interval == 0:
                 cur_pos += 1
                 cur_edge = zome.edges[cur_edge_id]
@@ -43,7 +45,9 @@ def snake_pattern(zome):
                     forward = cur_edge['startNode'] == next_node_i
                 next_p = (cur_edge['pixels'] if forward else list(reversed(cur_edge['pixels'])))[cur_pos]
                 buffer = buffer[1:] + [next_p]
-            
+            if frame_id!=0 and frame_id % update_color_interval == 0:
+                color_id = color_id + 1 if color_id < num_colors-1 else 0
+                color_map = plt.colormaps.get_cmap(color_map_names[color_id])
             buffer_indices = np.linspace(0,1,len(buffer))
             rgbas = color_map(buffer_indices) #map color to each location in buffer, indexes normalized to 0-1
             # brightness = np.repeat(buffer_indices/buffer_length, 4, axis=1)
