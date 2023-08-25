@@ -24,7 +24,40 @@ class Zome:
         all_y = [self.nodes[i]['point'][1] for i in range(len(self.nodes))]
         return np.max(all_y) 
 
+    def get_inside_outside_strands_pixels(self):
+        pixels_per_strand = [315, 360, 315, 360]  # repeats, index 0 and 2 are on same wood, 0 is out, index 1 and 3 are on same wood, 1 is out
+        num_strands = 40
+        start_channel = 0
+        inside_strands = []
+        outside_strands = []
+        for strand in range(num_strands):
+            pixels_in_strand = pixels_per_strand[strand % len(pixels_per_strand)]
+            is_outside = strand % len(pixels_per_strand) >= 2
+            end_channel = start_channel + pixels_in_strand
+            if is_outside:
+                outside_strands.append(np.arange(start_channel, end_channel))
+            else:
+                inside_strands.append(np.arange(start_channel, end_channel))
+            start_channel += pixels_in_strand
+        return  inside_strands, outside_strands,
 
+    def get_inside_outside_strands_edges(self):
+        edges_per_strand = [7, 8, 7, 8]  # repeats, index 0 and 2 are on same wood,  index 1 and 3 are on same wood. 0,1 is out, 2,3 is in
+        num_strands = 40
+        start_edge = 0
+        inside_edges = []
+        outside_edges = []
+        for strand in range(num_strands):
+            edges_in_strand = edges_per_strand[strand % len(edges_per_strand)]
+            is_outside = strand % len(edges_per_strand) >= 2
+            end_edge = start_edge + edges_in_strand
+            if is_outside:
+                outside_edges.append(np.arange(start_edge, end_edge))
+            else:
+                inside_edges.append(np.arange(start_edge, end_edge))
+            start_edge += edges_in_strand
+        return inside_edges, outside_edges
+    
 def transform_to_byte_str(frame_id: int, rgba_values: list) -> str:
     """Transform the rgba values for all leds in a frame to bytes str for printing. 
 

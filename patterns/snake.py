@@ -13,19 +13,25 @@ args = parser.parse_args()
 
 
 def snake_pattern(zome):
-    n_snakes = 22
+    n_snakes = 20
     update_interval = 1
     alpha = 100
     frame_id = 0
-    buffer_length = 80
+    buffer_length = 160 #for both inside and outside, so actual length for one side is half of this value
     update_color_interval = 400
     num_colors = 20
     color_map_names = random.choices(plt.colormaps(), k=num_colors)
     # color_palette = sns.color_palette('cubehelix')
+    inside_strands_edges, outside_strands_edges = zome.get_inside_outside_strands_edges()
+    all_inside_edges = [edge for strands in inside_strands_edges for edge in strands]
+    all_outside_edges = [edge for strands in outside_strands_edges for edge in strands]
     def make_snake():
-        cur_edge_id = random.choice(np.arange(len(zome.edges)))
-        cur_edge = zome.edges[cur_edge_id]
-        cur_pos = random.randint(0, len(cur_edge["pixels"]))
+        cur_edge_id = random.choice(all_inside_edges)
+        cur_edge_inside = zome.edges[cur_edge_id]
+        # find corresponding outside edge
+        ind = all_inside_edges.index(cur_edge_id)
+        cur_edge_outside = zome.edges[all_outside_edges[ind]]
+        cur_pos = random.randint(0, len(cur_edge_inside["pixels"]))
         buffer = [0] * buffer_length
         forward = True
         color_map = plt.colormaps.get_cmap(color_map_names[0])
@@ -34,37 +40,32 @@ def snake_pattern(zome):
             nonlocal cur_edge_id, cur_pos, buffer, forward, color_map, color_map_names, color_id
             if frame_id % update_interval == 0:
                 cur_pos += 1
-                cur_edge = zome.edges[cur_edge_id]
-                if cur_pos >= len(cur_edge['pixels']):
+                cur_edge_inside = zome.edges[cur_edge_id]
+                # find corresponding outside edge
+                ind = all_inside_edges.index(cur_edge_id)
+                cur_edge_outside = zome.edges[all_outside_edges[ind]]
+                if cur_pos >= len(cur_edge_inside['pixels']):
                     cur_pos = 0
-                    next_node_i = cur_edge['endNode' if forward else 'startNode']
+                    next_node_i = cur_edge_inside['endNode' if forward else 'startNode']
                     next_node = zome.nodes[next_node_i]
                     next_possible_edge_ids = [ i for i in next_node['edges'] if i!= cur_edge_id]
                     cur_edge_id = random.choice(next_possible_edge_ids)
-                    cur_edge = zome.edges[cur_edge_id]
-                    forward = cur_edge['startNode'] == next_node_i
-                next_p = (cur_edge['pixels'] if forward else list(reversed(cur_edge['pixels'])))[cur_pos]
-                buffer = buffer[1:] + [next_p]
+                    cur_edge_inside = zome.edges[cur_edge_id]
+                    # find corresponding outside edge
+                    ind = all_inside_edges.index(cur_edge_id)
+                    cur_edge_outside = zome.edges[all_outside_edges[ind]]
+                    forward = cur_edge_inside['startNode'] == next_node_i
+                next_p_inside = (cur_edge_inside['pixels'] if forward else list(reversed(cur_edge_inside['pixels'])))[cur_pos]
+                next_p_outside = (cur_edge_outside['pixels'] if forward else list(reversed(cur_edge_outside['pixels'])))[cur_pos]
+                buffer = buffer[2:] + [next_p_inside, next_p_outside]
             if frame_id!=0 and frame_id % update_color_interval == 0:
                 color_id = color_id + 1 if color_id < num_colors-1 else 0
                 color_map = plt.colormaps.get_cmap(color_map_names[color_id])
-            buffer_indices = np.linspace(0,1,len(buffer))
-            rgbas = color_map(buffer_indices) #map color to each location in buffer, indexes normalized to 0-1
+            rgbas = color_map(np.linspace(0,1,len(buffer))) #map color to each location in buffer, indexes normalized to 0-1
             # brightness = np.repeat(buffer_indices/buffer_length, 4, axis=1)
             rgbas = (rgbas * 255).astype(int)
             for i,p in enumerate(buffer):
                 rgba_values[p] = rgbas[i]
-                # rgba_values[p] = np.array(rgbas[i] * i/buffer_length).astype(int)
-                # rgba_values[p:3] = alpha
-            # for i,p in enumerate(buffer):
-            #     brightness = float(i)/buffer_length
-            #     # color = np.array(color) * brightness
-            #     # print(color)
-            #     color = np.array(color_palette(i)[:3]) * 255
-            #     # r, g, b = colorsys.hsv_to_rgb(color_template[0],color_template[1], brightness)
-            #     # color = np.array([r,g,b]) * 255 
-            #     color = color.astype(int)
-            #     rgba_values[p] = list(color) + [alpha] # combine the RGB, and alpha
         return snake
     
     snakes = [make_snake() for _ in range(n_snakes)]

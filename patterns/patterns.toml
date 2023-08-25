@@ -30,6 +30,11 @@ script = "snake.py"
 program = "python3"
 
 [[patterns]]
+name = "top_circle"
+script = "top_circle.py"
+program = "python3"
+
+[[patterns]]
 name = "matrix-rain"
 script = "matrix-rain.js"
 program = "node"
