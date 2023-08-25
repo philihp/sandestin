@@ -30,8 +30,8 @@ script = "snake.py"
 program = "python3"
 
 [[patterns]]
-name = "top_circle"
-script = "top_circle.py"
+name = "spider"
+script = "spider_pattern.py"
 program = "python3"
 
 [[patterns]]
