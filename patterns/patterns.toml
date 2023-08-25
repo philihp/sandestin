@@ -31,7 +31,7 @@ program = "python3"
 
 [[patterns]]
 name = "spider"
-script = "spider_pattern.py"
+script = "spider.py"
 program = "python3"
 
 [[patterns]]
@@ -78,3 +78,8 @@ program = "python3"
 name = "tunnel"
 script = "tunnel.js"
 program = "node"
+
+[[patterns]]
+name = "faces"
+script = "faces.py"
+program = "python3"

@@ -58,6 +58,37 @@ class Zome:
             start_edge += edges_in_strand
         return inside_edges, outside_edges
     
+    def get_inside_outside_faces_edges(self):
+        inside_edges, outside_edges = self.get_inside_outside_strands_edges()
+        inside_faces = []
+        outside_faces = []
+        for strand_id in range(20):
+            if strand_id % 2 == 0: #  looking at clockwise ones as lower left
+                for i, edge_id in enumerate(inside_edges[strand_id]):
+                    lower_left = edge_id
+                    lower_right = inside_edges[(strand_id+1-2*i) % 20][i] # the next? strand, same position
+                    upper_left =  inside_edges[(strand_id-1-2*i) % 20][i+1] # the prev? strand, same position + 1
+                    if i < 6:
+                        upper_right = inside_edges[(strand_id+2) % 20][i+1] # the next? 2 strand, same position + 1
+                    else:
+                        upper_right = inside_edges[(strand_id+1-2*i) % 20][i+1] # for last face special case, the upper right is next? strands, same position + 1
+                    face = [lower_left,lower_right, upper_left, upper_right ]
+                    inside_faces.append(face)
+
+                for i, edge_id in enumerate(outside_edges[strand_id]):
+                    lower_left = edge_id
+                    lower_right = outside_edges[(strand_id+1-2*i) % 20][i] # the next? strand, same position
+                    upper_left =  outside_edges[(strand_id-1-2*i) % 20][i+1] # the prev? strand, same position + 1
+                    if i < 6:
+                        upper_right = outside_edges[(strand_id+2) % 20][i+1] # the next? 2 strand, same position + 1
+                    else:
+                        upper_right = outside_edges[(strand_id+1-2*i) % 20][i+1] # for last face special case, the upper right is next? strands, same position + 1
+                    face = [lower_left,lower_right, upper_left, upper_right ]
+                    outside_faces.append(face)
+                    
+        return inside_faces, outside_faces
+
+
 def transform_to_byte_str(frame_id: int, rgba_values: list) -> str:
     """Transform the rgba values for all leds in a frame to bytes str for printing. 
 
