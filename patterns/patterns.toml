@@ -80,6 +80,11 @@ script = "tunnel.js"
 program = "node"
 
 [[patterns]]
-name = "faces"
-script = "faces.py"
+name = "faces_linear"
+script = "faces_linear.py"
+program = "python3"
+
+[[patterns]]
+name = "faces_random"
+script = "faces_random.py"
 program = "python3"

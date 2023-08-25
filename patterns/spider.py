@@ -18,10 +18,10 @@ def spider_pattern(zome):
     frame_id = 0
     inside_strands_pixels, outside_strands_pixels = zome.get_inside_outside_strands_pixels()
     inside_strands_edges, outside_strands_edges = zome.get_inside_outside_strands_edges()
-    update_color_interval = 500
+    update_color_interval = 200
 
-    target_length_per_strand = target_length_per_strand = [random.randint(10, 100) for _ in range(20)]
-    cur_length_per_strand =  np.zeros(20).astype(int) # TODO: maybe randomize
+    target_length_per_strand = [random.randint(10, 100) for _ in range(20)]
+    cur_length_per_strand =  np.zeros(20).astype(int)
     num_colors = 20
     color_id = 0
     color_map_names = random.choices(plt.colormaps(), k=num_colors)

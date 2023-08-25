@@ -1,3 +1,16 @@
+
+[[items]]
+pattern = "spider"
+seconds = 60
+
+[[items]]
+pattern = "faces_linear"
+seconds = 30
+
+[[items]]
+pattern = "faces_random"
+seconds = 30
+
 [[items]]
 pattern = "scandown"
 seconds = 10
@@ -23,14 +36,9 @@ pattern = "address-test-2"
 seconds = 5
 
 [[items]]
-pattern = "spider"
-seconds = 100
-
-[[items]]
 pattern = "helix"
 seconds = 5
 options = { mode = 1, whiteOnly = true, saturationSpeed = 0, decay = 0.95 }
-
 
 [[items]]
 pattern = "tunnel"
