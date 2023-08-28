@@ -35,11 +35,11 @@ def faces_pattern(zome):
             for i, edge_id in enumerate(inside_face_edges[face_id]):
                 pixels_inside += zome.edges[edge_id]['pixels']
                 pixels_outside += zome.edges[outside_face_edges[face_id][i]]['pixels']
-            if random.random() > 0.8: # 20% chance no color
-                rgbas = np.zeros((len(pixels_inside), 4))
-            else:
-                rgbas = color_map(np.linspace(0,1,len(pixels_inside)))
-                rgbas = (rgbas * 255).astype(int)
+            # if random.random() > 0.8: # 20% chance no color
+            #     rgbas = np.zeros((len(pixels_inside), 4))
+            # else:
+            #     rgbas = color_map(np.linspace(0,1,len(pixels_inside)))
+            #     rgbas = (rgbas * 255).astype(int)
             for j,p in enumerate(pixels_inside):
                 rgba_values[p] =  rgbas[j]
                 p2 = pixels_outside[j]
