@@ -1,15 +1,19 @@
 
 [[items]]
+pattern = "snake"
+seconds = 100
+
+[[items]]
 pattern = "spider"
 seconds = 60
 
 [[items]]
 pattern = "faces_linear"
-seconds = 30
+seconds = 60
 
 [[items]]
 pattern = "faces_random"
-seconds = 30
+seconds = 60
 
 [[items]]
 pattern = "scandown"
@@ -54,8 +58,9 @@ pattern = "gpt3"
 seconds = 60
 
 [[items]]
-pattern = "snake"
+pattern = "img_2d_projection"
 seconds = 100
+
 
 [[items]]
 pattern = "helix"
