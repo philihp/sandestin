@@ -89,7 +89,7 @@ class Zome:
         return inside_faces, outside_faces
 
 
-def transform_to_byte_str(frame_id: int, rgba_values: list) -> str:
+def transform_to_byte_str(frame_id: int, rgba_values: np.ndarray) -> str:
     """Transform the rgba values for all leds in a frame to bytes str for printing. 
 
     Args:
@@ -99,10 +99,10 @@ def transform_to_byte_str(frame_id: int, rgba_values: list) -> str:
     Returns:
         str: a byte string to output to the led controller 
     """
+    
     message =  struct.pack('<I', frame_id) #start with frame_id, turn it into a little endian 4 byte unsigned int
-    for rgba in rgba_values:
-        r,g,b,a = rgba[0],rgba[1],rgba[2],rgba[3]
-        message += struct.pack('BBBB', r,g,b,a)
+    flattened_values = rgba_values.flatten().tolist()
+    message += bytes(flattened_values)
     # message += struct.pack('BBBB' * len(rgba_values), *(value for rgba in rgba_values for value in rgba))
     # print("after", len(message))
     return message 
