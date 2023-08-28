@@ -1,7 +1,7 @@
 
 [[items]]
 pattern = "snake"
-seconds = 100
+seconds = 60
 
 [[items]]
 pattern = "spider"
@@ -9,10 +9,6 @@ seconds = 60
 
 [[items]]
 pattern = "faces_linear"
-seconds = 60
-
-[[items]]
-pattern = "faces_random"
 seconds = 60
 
 [[items]]
@@ -61,6 +57,10 @@ seconds = 60
 pattern = "img_2d_projection"
 seconds = 100
 
+[[items]]
+pattern = "faces_random"
+seconds = 60
+
 
 [[items]]
 pattern = "helix"
@@ -75,6 +75,9 @@ seconds = 40
 pattern = "matrix-rain"
 seconds = 30
 
+[[items]]
+pattern = "faces_seq"
+seconds = 60
 
 
 

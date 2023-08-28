@@ -88,3 +88,8 @@ program = "python3"
 name = "faces_random"
 script = "faces_random.py"
 program = "python3"
+
+[[patterns]]
+name = "faces_seq"
+script = "faces_seq.py"
+program = "python3"
