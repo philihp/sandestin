@@ -100,5 +100,9 @@ def transform_to_byte_str(frame_id: int, rgba_values: list) -> str:
         str: a byte string to output to the led controller 
     """
     message =  struct.pack('<I', frame_id) #start with frame_id, turn it into a little endian 4 byte unsigned int
-    message += struct.pack('BBBB' * len(rgba_values), *(value for rgba in rgba_values for value in rgba))
+    for rgba in rgba_values:
+        r,g,b,a = rgba[0],rgba[1],rgba[2],rgba[3]
+        message += struct.pack('BBBB', r,g,b,a)
+    # message += struct.pack('BBBB' * len(rgba_values), *(value for rgba in rgba_values for value in rgba))
+    # print("after", len(message))
     return message 
