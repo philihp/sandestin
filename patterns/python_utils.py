@@ -11,6 +11,7 @@ class Zome:
         self.pixels = model_json['model']['pixels']
         self.num_pixels = len(self.pixels)
         self.fps = model_json['framesPerSecond']
+        self.options = model_json["options"]
         
     def height(self):
         all_z = [self.nodes[i]['point'][2] for i in range(len(self.nodes))]

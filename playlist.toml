@@ -1,10 +1,15 @@
-
 [[items]]
-pattern = "snake"
-seconds = 60
+pattern = "top_down_rainbow"
+seconds = 10
+options = { color_map_name = "twilight" }
 
 [[items]]
 pattern = "spider"
+seconds = 10
+options = { color_map_name = "plasma" }
+
+[[items]]
+pattern = "snake"
 seconds = 60
 
 [[items]]

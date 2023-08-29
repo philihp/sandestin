@@ -17,27 +17,19 @@ args = parser.parse_args()
 def spider_pattern(zome):
     frame_id = 0
     inside_strands_pixels, outside_strands_pixels = zome.get_inside_outside_strands_pixels()
-    inside_strands_edges, outside_strands_edges = zome.get_inside_outside_strands_edges()
-    update_color_interval = 200
 
     target_length_per_strand = [random.randint(10, 100) for _ in range(20)]
     cur_length_per_strand =  np.zeros(20).astype(int)
-    num_colors = 20
-    color_id = 0
-    color_map_names = random.choices(plt.colormaps(), k=num_colors)
-    color_map = plt.colormaps.get_cmap(color_map_names[0])
-    while True:
-        # for _ in range(total_frames):
-        rgba_values = np.zeros((zome.num_pixels, 4)).astype(int) #initialize with all zeros 
-        if frame_id!=0 and frame_id % update_color_interval == 0:
-                color_id = color_id + 1 if color_id < num_colors-1 else 0
-                color_map = plt.colormaps.get_cmap(color_map_names[color_id])
 
+    color_map = plt.colormaps.get_cmap(zome.options['color_map_name']) # defined in options
+
+    while True:
+        rgba_values = np.zeros((zome.num_pixels, 4)).astype(int) #initialize with all zeros 
         for strand_id in range(20):
             if target_length_per_strand[strand_id] > cur_length_per_strand[strand_id]:
                 cur_length_per_strand[strand_id] += 1
             elif target_length_per_strand[strand_id] == cur_length_per_strand[strand_id]:
-                 target_length_per_strand[strand_id] = random.randint(10, 240)
+                 target_length_per_strand[strand_id] = random.randint(30, 315)
             else:
                 cur_length_per_strand[strand_id] -= 1
             buffer_in = inside_strands_pixels[strand_id][::-1][:cur_length_per_strand[strand_id]] 

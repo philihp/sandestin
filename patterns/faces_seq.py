@@ -66,7 +66,6 @@ def faces_pattern(zome):
             # print(rotated_pixels)
             rgbas = color_map(rotated_pixels)
             rgbas = (rgbas * 255).astype(int)
-            rgbas[:,3] = 0.5
             pixels_inside_per_face.append(pixels_inside)
             pixels_outside_per_face.append(pixels_outside)
             rgbas_per_face.append(rgbas)
